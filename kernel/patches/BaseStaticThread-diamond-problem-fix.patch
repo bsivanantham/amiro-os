@@ -1,0 +1,25 @@
+From 94da217d87dd5994e8ac096a121241dafd7b41e6 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Thomas=20Sch=C3=B6pping?= <tschoepp@cit-ec.uni-bielefeld.de>
+Date: Tue, 13 Jun 2017 11:04:04 +0200
+Subject: [PATCH] BaseStaticThread diamond problem fix
+
+---
+ os/various/cpp_wrappers/ch.hpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/os/various/cpp_wrappers/ch.hpp b/os/various/cpp_wrappers/ch.hpp
+index ec86566..4eb7b2e 100644
+--- a/os/various/cpp_wrappers/ch.hpp
++++ b/os/various/cpp_wrappers/ch.hpp
+@@ -877,7 +877,7 @@ namespace chibios_rt {
+    * @param N               the working area size for the thread class
+    */
+   template <int N>
+-  class BaseStaticThread : public BaseThread {
++  class BaseStaticThread : public virtual BaseThread {
+   protected:
+     THD_WORKING_AREA(wa, N);
+ 
+-- 
+2.7.4
+

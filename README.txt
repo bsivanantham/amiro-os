@@ -1,9 +1,10 @@
-AMiRo-OS is the operating system for the base version of the Autonomous Mini
+AMiRo-OS is an operating system for the base version of the Autonomous Mini
 Robot (AMiRo) [1]. It utilizes ChibiOS (a real-time operating system for
 embedded devices developed by Giovanni di Sirio; see <http://chibios.org>) as
-system kernel and extends it with platform specific functionalities.
+system kernel and extends it with platform specific configurations and further
+functionalities and abstractions.
 
-Copyright (C) 2016..2017  Thomas Schöpping et al.
+Copyright (C) 2016..2018  Thomas Schöpping et al.
 (a complete list of all authors is given below)
 
 This program is free software: you can redistribute it and/or modify
@@ -24,14 +25,8 @@ Cognitive Interaction Technology 'CITEC' (EXC 277) at Bielefeld
 University, which is funded by the German Research Foundation (DFG).
 
 Authors:
- - Thomas Schöpping        <tschoepp[at]cit-ec.uni-bielefeld.de>
- - Timo Korthals           <tkorthals[at]cit-ec.uni-bielefeld.de>
- - Stefan Herbrechtsmeier  <sherbrec[at]cit-ec.uni-bielefeld.de>
- - Teerapat Chinapirom     <tchinapirom[at]cit-ec.uni-bielefeld.de>
- - Robert Abel
- - Marvin Barther
- - Claas Braun
- - Tristan Kenneweg
+ - Thomas Schöpping          <tschoepp[at]cit-ec.uni-bielefeld.de>
+ - Marc Rothmann
 
 References:
  [1] S. Herbrechtsmeier, T. Korthals, T. Schopping and U. Rückert, "AMiRo: A
@@ -59,15 +54,17 @@ the source code, and flash it to the AMiRo modules.
 ================================================================================
 
 CONTENTS:
- 1  Required software
-   1.1  Git
-   1.2  GCC ARM Embedded Toolchain
-   1.3  ChibiOS
-   1.4  AMiRo-BLT
- 2  Recommended software
-   2.1  gtkterm and hterm
-   2.2  QtCreator
- 3  Building and flashing
+
+  1  Required software
+    1.1  Git
+    1.2  Bootloader & Tools
+    1.3  System Kernel
+    1.4  Low-Level Drivers
+  2  Recommended software
+    2.1  gtkterm and hterm
+    2.2  QtCreator IDE
+    2.3  Doxygen & Graphviz
+  3  Building and flashing
 
 ================================================================================
 
@@ -76,10 +73,10 @@ CONTENTS:
 1 - REQUIRED SOFTWARE
 ---------------------
 
-In order to compile the source code, you need to install the GCC for ARM
-embedded devices. Since AMiRo-OS requires ChibiOS as system kernel, you need a
-copy of that project as well. Furthermore, AMiRo-OS requires a compatible
-bootloader, such as provided by the AMiRo-BLT project.
+In order to compile the source code, you need to install the GNU ARM Embedded
+Toolchain. Since this project uses GNU Make for configuring and calling the
+compiler, this tool is requried too. AMiRo-OS uses ChibiOS as system kernel,
+so you need a copy of that project as well.
 
 
 1.1 - Git
@@ -89,74 +86,58 @@ Since all main- and subprojects are available as Git repositories, installing a
 recent version of the tool is mandatory.
 
 
-1.2 GCC ARM Embedded Toolchain
-------------------------------
+1.2 Bootloader & Tools
+----------------------
 
-Various versions of the GCC for ARM embedded devices can be found at
-<https://launchpad.net/gcc-arm-embedded>. It is highly recommended to use the
-version 4.8 with update 2014-q1 since some others will cause issues. For
-installation of the compiler toolchain, please follow the instructions that can
-be found on the web page.
-
-If you are running a 64-bit operating system, you will have to install several
-32-bit libraries in order to make the compiler work. The required packages are
-libc6, libstdc++6, and libncurses5. You can run the following shell commands to
-install the according 32-bit versions of the packages:
-  >$ sudo dpkg --add-architecture i386 && sudo apt-get update
-  >$ sudo apt-get install libc6:i386 libstdc++6:i386 libncurses5:i386
+AMiRo-OS can take advantage of an installed bootloader if such exists and
+provides an interface. By default, AMiRo-BLT is included as a Git submodule and
+can easily be initialized via the ./setup.sh script. If requried, you can
+replace the used bootloader by adding an according subfolder in the ./bootloader
+directory. Note that you will have to adapt the makefiles and scripts, and
+probably the operating system as well.
+AMiRo-BLT furthermore has its own required and recommended software tools as
+described in its README.txt file. Follow th instructions to initialize the
+development environment manually or use the ./setup.sh script.
 
 
-1.3 ChibiOS
------------
+1.3 System Kernel
+-----------------
 
 Since AMiRo-OS uses ChibiOS as underlying system kernel, you need to acquire a
-copy of it as well. First, go to the directory which contains the AMiRo-OS
-folder (but do not go into the AMiRo-OS directory itself!). Now clone the GIT
-repository of ChibiOS and checkout version 2.6.x:
-  >$ git clone https://github.com/ChibiOS/ChibiOS.git ChibiOS
-  >$ cd ChibiOS
-  >$ git checkout 2e6dfc7364e7551483922ea6afbaea8f3501ab0e
-It is highly recommended to use exactly this commit. Although newer commits in
-the 2.6.x branch might work fine, AMiRo-OS is not compatible with ChibiOS
-version 3 or newer.
-
-AMiRo-OS comes with some patches to ChibiOS, which must be applied as well
-before compiling the project. Therefore you need to copy all files from the
-./patches directory of AMiRo-OS to the root directory of ChibiOS. You can then
-apply the patches via the following command:
-  >$ for i in `ls | grep patch`; do git am --ignore-space-change --ignore-whitespace < ${i}; done
-If the files could not be patched successfully, you are probably using an
-incompatible version of ChibiOS (try to checkout the correct commit as denoted
-above).
+copy of it as well. For the sake of compatibility, it is included in AMiRo-OS as
+a Git submodule. It is highly recommended to use the ./setup.sh script for
+initialization. Moreover, you have to apply the patches to ChibiOS in order to
+make AMiRo-OS work properly. It is recommended to use the .setup.sh script for this
+purpose.
+If you would like to use a different kernel, you can add a subfolder in the
+./kernel/ directory and adapt the scripts and operating system source code.
 
 
-1.4 AMiRo-BLT
--------------
+1.4 Low-Level Drivers
+---------------------
 
-AMiRo-BLT is an additional software project, which is developed in parallel with
-AMiRo-OS. If you did not receive a copy of AMiRo-BLT with AMiRo-OS, you can find
-all code and documentation at <https://opensource.cit-ec.de/projects/amiro-os>.
-Instructions for installation and how to use the software provided by AMiRo-BLT
-can be found on the web page or in the project's readme file. It is highly
-recommended to install AMiRo-BLT in the same directory as AMiRo-OS and ChibiOS
-and name its root directory 'amiro-blt'.
+Any required low-level drivers for the AMiRo hardware is available in an
+additional project: AMiRo-LLD. It is included as a Git subodule and can be
+initialized via the ./setup.sh script.
 
 
 
 2 - RECOMMENDED SOFTWARE
 ------------------------
 
-In order to fully use all features of AMiRo-OS it is recommended to install the
-'hterm' or 'gtkterm' application for accessing the robot. To ease further
-development, this project offers support for the QtCreator IDE.
+AMiRo-OS can take advanatge of an installed bootloader, which is recommended for
+the best experience. In order to use all features of AMiRo-OS it is also
+recommended to install either the 'hterm' or 'gtkterm' application for accessing
+the robot. To ease further development, this project offers support for the
+QtCreator IDE.
 
 
 2.1 - gtkterm and hterm
 -----------------------
 
-Depending on your operating system, it is recommended to install 'gtkterm' for
+Depending on your operating system it is recommended to install 'gtkterm' for
 Linux (available in the Ubuntu repositories), or 'hterm' for Windows. For
-gtkterm you need to modify the configuration file ~/.gtktermrc (it is generated
+gtkterm you need to modify the configuration file ~/.gtktermrc (generated
 automatically when you start the application for the first time) as follows:
 
   port	= /dev/ttyUSB0
@@ -172,15 +153,26 @@ automatically when you start the application for the first time) as follows:
   echo	= False
   crlfauto	= True
 
-For hterm you must need to configure the tool analogously.
+For hterm you need to configure the tool analogously. With either tool the robot
+can be reset by toggling the RTS signal on and off again, and you can access the
+system shell of AMiRo-OS.
 
 
-2.2 - QtCreator
----------------
+2.2 - QtCreator IDE
+-------------------
 
-In order to setup QtCreator projects for the three AMiRo base modules, a script
-is provided in the directory ./ide/qtcreator/. It is accompanied by an
-additional README.txt file, which contains further information.
+In order to setup QtCreator projects for the three AMiRo base modules, you can
+use the provided ./setup.sh script. Further instructions for a more advanced
+configuration of the IDE are provided in the ./tools/qtcreator/README.txt file.
+
+
+2.3  Doxygen & Graphviz
+-----------------------
+
+In order to generate the documentation from the source code, Doxygen and
+Graphviz are requried. It is recommended to install these tool using the
+default versions for your system. Ubuntu users should simply run
+  >$ sudo apt-get install doxygen graphviz
 
 
 
@@ -188,30 +180,22 @@ additional README.txt file, which contains further information.
 -------------------------
 
 Each time you modify any part of AMiRo-OS, you need to recompile the whole
-project for the according AMiRo module. Therefore you have to use the makefiles
-provided in ./devices/<DeviceToRecompile>/ by simply executing 'make' in the
-according directory. If you want to compile all modules at once, you can also
-use the makefile in the ./devices/ folder.
+project for the according AMiRo module. Therefore you can use the ./Makefile by
+simply executing 'make' and follow the instructions. Alternatively, you can
+either use the makefiles provided per module in ./os/modules/<ModuleToCompile>
+or - if you want to compile all modules at once - the makefile in the
+./os/modules folder. After the build process has finished successfully, you
+always have to flash the generated program to the robot. Therefore you need an
+appropriate tool, such as stm32flash (if you don't use a bootloader) or
+SerialBoot (highly recommended; provided by AMiRo-BLT). Similarly to the
+compilation procedure as described above, you can flash either each module
+separately, or all modules at once by executing 'make flash' from the according
+directory.
 
-After compilation, you always have to flash the generated program to the robot.
-Therefore you need to install the SerialBoot tool provided by the AMiRo-BLT
-project. By default AMiRo-OS assumes AMiRo-BLT to be installed in the same
-folder and its root directory to be named 'amiro-blt'. If this is the case, it
-will automatically detect the SerialBoot tool. Otherwise the tool must be
-accessible globally under the environment variable 'SERIALBOOT'. You can make
-it so by appending the following line to your ~/.bashrc file:
-
-  export SERIALBOOT=</absolute/path/to/the/SerialBoot/binary>
-
-You can test the tool by calling it via the variable:
-  >$ ${SERIALBOOT}
-This should print some information about the tool.
-
-Similar to the compilation procedure as described above, you can flash either
-each module separately, or all modules at once by executing 'make flash' from
-the according directory. Note that you must connect the programming cable either
-to the DiWheelDrive or the PowerManagement module for flashing the operating
-system. All other modules are powered off after reset so that only these two
-offer a bootloader that is required for flashing.
+When using SerialBoot, please note that you must connect the programming cable
+either to the DiWheelDrive or the PowerManagement module for flashing the
+operating system. All other modules are powered off after reset so that only
+these two offer a running bootloader, which is required for flashing.
 
 ================================================================================
+
