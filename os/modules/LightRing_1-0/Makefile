@@ -84,18 +84,12 @@ endif
 
 # Stack size to be allocated to the Cortex-M process stack. This stack is
 # the stack used by the main() thread.
-ifneq ($(MAIN_STACKSIZE_LIGHTRING),)
-  USE_PROCESS_STACKSIZE = $(MAIN_STACKSIZE_LIGHTRING)
-endif
 ifeq ($(USE_PROCESS_STACKSIZE),)
   USE_PROCESS_STACKSIZE = 0x400
 endif
 
 # Stack size to the allocated to the Cortex-M main/exceptions stack. This
 # stack is used for processing interrupts and exceptions.
-ifneq ($(EXCEPTIONS_STACKSIZE_LIGHTRING),)
-  USE_PROCESS_STACKSIZE = $(EXCEPTIONS_STACKSIZE_LIGHTRING)
-endif
 ifeq ($(USE_EXCEPTIONS_STACKSIZE),)
   USE_EXCEPTIONS_STACKSIZE = 0x400
 endif
@@ -169,11 +163,11 @@ CSRC = $(STARTUPSRC) \
        $(CHIBIOS)/os/various/syscalls.c \
        $(CHIBIOS)/os/hal/lib/streams/chprintf.c \
        module.c \
-       $(APPSCSRC_LIGHTRING)
+       $(APPSCSRC)
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.
-CPPSRC = $(APPSCPPSRC_LIGHTRING)
+CPPSRC = $(APPSCPPSRC)
 
 # C sources to be compiled in ARM mode regardless of the global setting.
 # NOTE: Mixing ARM and THUMB mode enables the -mthumb-interwork compiler
@@ -218,7 +212,7 @@ INCDIR = $(CHIBIOS)/os/license \
          $(AMIROOS) \
          $(AMIROOSCOREINC) \
          $(UNITTESTSINC) \
-         $(APPSINC_LIGHTRING)
+         $(APPSINC)
 
 #                                                                              #
 # Project, sources and paths                                                   #

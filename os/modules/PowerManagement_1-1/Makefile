@@ -84,25 +84,19 @@ endif
 
 # Stack size to be allocated to the Cortex-M process stack. This stack is
 # the stack used by the main() thread.
-ifneq ($(MAIN_STACKSIZE_POWERMANAGEMENT),)
-  USE_PROCESS_STACKSIZE = $(MAIN_STACKSIZE_POWERMANAGEMENT)
-endif
 ifeq ($(USE_PROCESS_STACKSIZE),)
   USE_PROCESS_STACKSIZE = 0x400
 endif
 
 # Stack size to the allocated to the Cortex-M main/exceptions stack. This
 # stack is used for processing interrupts and exceptions.
-ifneq ($(EXCEPTIONS_STACKSIZE_POWERMANAGEMENT),)
-  USE_PROCESS_STACKSIZE = $(EXCEPTIONS_STACKSIZE_POWERMANAGEMENT)
-endif
 ifeq ($(USE_EXCEPTIONS_STACKSIZE),)
   USE_EXCEPTIONS_STACKSIZE = 0x400
 endif
 
 # Enables the use of FPU on Cortex-M4.
 # Possible selections are:
-#   no     - no FPU is used (propably equals 'soft')
+#   no     - no FPU is used (propably equals 'soft')b
 #   soft   - does not use the FPU, thus all floating point operations are emulated
 #   softfp - uses the FPU, but uses the integer registers only
 #   hard   - uses the FPU and passes data via the FPU registers
@@ -169,11 +163,11 @@ CSRC = $(STARTUPSRC) \
        $(CHIBIOS)/os/various/syscalls.c \
        $(CHIBIOS)/os/hal/lib/streams/chprintf.c \
        module.c \
-       $(APPSCSRC_POWERMANAGEMENT)
+       $(APPSCSRC)
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.
-CPPSRC = $(APPSCPPSRC_POWERMANAGEMENT)
+CPPSRC = $(APPSCPPSRC)
 
 # C sources to be compiled in ARM mode regardless of the global setting.
 # NOTE: Mixing ARM and THUMB mode enables the -mthumb-interwork compiler
@@ -218,7 +212,7 @@ INCDIR = $(CHIBIOS)/os/license \
          $(AMIROOS) \
          $(AMIROOSCOREINC) \
          $(UNITTESTSINC) \
-         $(APPSINC_POWERMANAGEMENT)
+         $(APPSINC)
 
 #                                                                              #
 # Project, sources and paths                                                   #
