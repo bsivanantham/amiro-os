@@ -57,20 +57,17 @@ ARGUMENTS:
 
   <module>:
       Builds the binary only for the specified module.
-      Possible values for <module> are:
-        - DiWheelDrive
-        - PowerManagement
-        - LightRing
 
 
 EXAMPLES:
 
-  >$$ make DiWheelDrive
-      This command will generate the binary file for the DiWheelDrive module.
+  >$$ make DiWheelDrive_1-1
+      This command will generate the binary file for the DiWheelDrive module
+      (version 1.1).
 
-  >$$ make DiWheelDrive LightRing
+  >$$ make DiWheelDrive_1-1 LightRing_1-0
       This command will generate the binary files for the two modules
-      DiWheelDrive and LightRing.
+      DiWheelDrive (version 1.1) and LightRing (version 1.0).
 
   >$$ make flash -j
       This command will first build all missing binary files and flash all
@@ -79,8 +76,8 @@ EXAMPLES:
 
   >$$ make clean && make all && make flash
       This command will first clean all thee projects. In a second step the
-      binaries for al three modules are build from scratch. Finally all modules
-      are updated with the latest software.
+      binaries for all modules are build from scratch. Finally all modules are
+      updated with the latest software.
       The following command can be used as a shorter and faster version:
           >$$ make clean && make flash -j
 

@@ -28,15 +28,6 @@ FLASH_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
 include $(FLASH_DIR)../../bootloader/bootloader.mk
 
-#FLASH_MODULES = $(PROJECT)
-#FLASH_FILE = build/$(FLASH_MODULES).$(FLASHTOOL_EXT)
-
-# supported modules and according IDs
-#MODULES := DiWheelDrive_1-1 PowerManagement_1-1 LightRing_1-0
-#DiWheelDrive_1-1 := $(shell printf "%u" 0x01000101)
-#PowerManagement_1-1 := $(shell printf "%u" 0x01010101)
-#LightRing_1-0 := $(shell printf "%u" 0x017F0100)
-
 # the files to flash
 ifdef PROJECT
   FLASH_MODULES = $(PROJECT)
