@@ -67,8 +67,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "core/inc/aos_confcheck.h"
 #include "core/inc/aos_debug.h"
+#include <core/inc/aos_iostream.h>
 #include "core/inc/aos_shell.h"
-#include "core/inc/aos_ssm.h"
 #include "core/inc/aos_system.h"
 #include "core/inc/aos_thread.h"
 #include "core/inc/aos_time.h"

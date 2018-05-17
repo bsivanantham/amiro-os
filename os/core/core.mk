@@ -31,8 +31,8 @@ AMIROOSCOREINC = $(AMIROOS_CORE_DIR)inc/
 
 # C source files
 AMIROOSCORECSRC = $(AMIROOS_CORE_DIR)src/aos_debug.c \
+                  $(AMIROOS_CORE_DIR)src/aos_iostream.c \
                   $(AMIROOS_CORE_DIR)src/aos_shell.c \
-                  $(AMIROOS_CORE_DIR)src/aos_ssm.c \
                   $(AMIROOS_CORE_DIR)src/aos_system.c \
                   $(AMIROOS_CORE_DIR)src/aos_thread.c \
                   $(AMIROOS_CORE_DIR)src/aos_timer.c \

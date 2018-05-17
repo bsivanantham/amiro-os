@@ -19,21 +19,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef _AMIROOS_SYSTEM_H_
 #define _AMIROOS_SYSTEM_H_
 
-#include <aos_ssm.h>
+#include <aos_iostream.h>
 #include <amiro-lld.h>
 #include <aos_shell.h>
 #include <aos_time.h>
 #include <chprintf.h>
-
-/**
- * @brief   Default system I/O stream.
- */
-#define AOS_SYSTEM_STDIO                        ((BaseSequentialStream*)aos.ssm)
-
-/**
- * @brief   Printf function that uses the default system I/O stream.
- */
-#define aosprintf(fmt, ...)                     chprintf((BaseSequentialStream*)AOS_SYSTEM_STDIO, fmt, ##__VA_ARGS__)
 
 /**
  * @brief   Resolution of the system time measurement.
@@ -41,24 +31,29 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define AOS_SYSTEM_TIME_RESOLUTION              ((MICROSECONDS_PER_SECOND + CH_CFG_ST_FREQUENCY - 1) / CH_CFG_ST_FREQUENCY)
 
 /**
+ * @brief   System event flag which is emitted when a shutdown was initiated.
+ */
+#define AOS_SYSTEM_EVENTFLAGS_SHUTDOWN          (eventflags_t)(1 << 0)
+
+/**
  * @brief   System event flag which is emitted when a shutdown to transportation mode was initiated.
  */
-#define AOS_SYSTEM_EVENTFLAGS_TRANSPORTATION    (eventflags_t)(1 << 0)
+#define AOS_SYSTEM_EVENTFLAGS_TRANSPORTATION    (AOS_SYSTEM_EVENTFLAGS_SHUTDOWN | (eventflags_t)(1 << 1))
 
 /**
  * @brief   System event flag which is emitted when a shutdown to deepsleep mode was initiated.
  */
-#define AOS_SYSTEM_EVENTFLAGS_DEEPSLEEP         (eventflags_t)(1 << 1)
+#define AOS_SYSTEM_EVENTFLAGS_DEEPSLEEP         (AOS_SYSTEM_EVENTFLAGS_SHUTDOWN | (eventflags_t)(1 << 2))
 
 /**
  * @brief   System event flag which is emitted when a shutdown to hibernate mode was initiated.
  */
-#define AOS_SYSTEM_EVENTFLAGS_HIBERNATE         (eventflags_t)(1 << 2)
+#define AOS_SYSTEM_EVENTFLAGS_HIBERNATE         (AOS_SYSTEM_EVENTFLAGS_SHUTDOWN | (eventflags_t)(1 << 3))
 
 /**
  * @brief   System event flag which is emitted when a system restart was initiated.
  */
-#define AOS_SYSTEM_EVENTFLAGS_RESTART           (eventflags_t)(1 << 3)
+#define AOS_SYSTEM_EVENTFLAGS_RESTART           (AOS_SYSTEM_EVENTFLAGS_SHUTDOWN | (eventflags_t)(1 << 4))
 
 /**
  * @brief   Major version of the implemented SSSP.
@@ -114,6 +109,11 @@ typedef struct aos_system {
   aos_ssspstage_t ssspStage;
 
   /**
+   * @brief   System I/O stream.
+   */
+  AosIOStream iostream;
+
+  /**
    * @brief   Event structure.
    */
   struct {
@@ -149,11 +149,6 @@ typedef struct aos_system {
     } os;
   } events;
 
-  /**
-   * @brief   Sequentiel Stream Multiplexer for system I/O
-   */
-  SequentialStreamMux* ssm;
-
 #if (AMIROOS_CFG_SHELL_ENABLE == true) || defined(__DOXYGEN__)
   /**
    * @brief   Pointer to the shell object.
@@ -167,6 +162,11 @@ typedef struct aos_system {
  * @brief   Global system object.
  */
 extern aos_system_t aos;
+
+/**
+ * @brief   Printf function that uses the default system I/O stream.
+ */
+#define aosprintf(fmt, ...)                     chprintf((BaseSequentialStream*)&aos.iostream, fmt, ##__VA_ARGS__)
 
 #ifdef __cplusplus
 extern "C" {

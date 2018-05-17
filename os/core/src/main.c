@@ -42,9 +42,14 @@ static event_listener_t _eventListenerOS;
 
 #if defined(MODULE_HAL_PROGIF) || defined(__DOXYGEN__)
 /**
- * @brief   SSM output for the programmer interface.
+ * @brief   I/O channel for the programmer interface.
  */
-static ssm_output_t _ssmProgIfOutput;
+static AosIOChannel _stdiochannel;
+
+/**
+ * @brief   I/O shell channel for the programmer interface.
+ */
+static AosShellChannel _stdshellchannel;
 #endif
 
 /**
@@ -135,7 +140,7 @@ int main(void)
 #if defined(MODULE_INIT_TESTS)
   MODULE_INIT_TESTS();
 #else
-  #warning "MODULE_INIT_TESTS no defined"
+  #warning "MODULE_INIT_TESTS not defined"
 #endif
 #endif
 
@@ -168,10 +173,15 @@ int main(void)
 #endif
   // user interface (if any)
 #ifdef MODULE_HAL_PROGIF
-  ssmOutputInit(&_ssmProgIfOutput, (BaseSequentialStream*)&MODULE_HAL_PROGIF);
-  ssmAddOutput(aos.ssm, &_ssmProgIfOutput);
-  ssmEnableOutput(aos.ssm, _ssmProgIfOutput.stream);
-  ssmSetInput(aos.ssm, (BaseSequentialStream*)&MODULE_HAL_PROGIF);
+  aosIOChannelInit(&_stdiochannel, (BaseAsynchronousChannel*)&MODULE_HAL_PROGIF);
+  aosIOChannelOutputEnable(&_stdiochannel);
+  aosIOStreamAddChannel(&aos.iostream, &_stdiochannel);
+#if (AMIROOS_CFG_SHELL_ENABLE == true)
+  aosShellChannelInit(&_stdshellchannel, &_stdiochannel);
+  aosShellChannelInputEnable(&_stdshellchannel);
+  aosShellChannelOutputEnable(&_stdshellchannel);
+  aosShellStreamAddChannel(&aos.shell->stream, &_stdshellchannel);
+#endif
 #endif
 
 #if defined(AMIROOS_CFG_MAIN_INIT_HOOK_6)

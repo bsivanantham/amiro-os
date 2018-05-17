@@ -18,12 +18,178 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <aos_shell.h>
 
+#if (AMIROOS_CFG_SHELL_ENABLE == true)
 #include <aos_debug.h>
 #include <aos_time.h>
 #include <aos_system.h>
 #include <chprintf.h>
 #include <string.h>
 #include <aos_thread.h>
+
+
+
+/**
+ * @brief   Event mask to be set on OS related events.
+ */
+#define AOS_SHELL_EVENTMASK_OS                  EVENT_MASK(0)
+
+/**
+ * @brief   Event mask to be set on a input event.
+ */
+#define AOS_SHELL_EVENTMASK_INPUT               EVENT_MASK(1)
+
+/**
+ * @brief   Implementation of the BaseAsynchronous write() method (inherited from BaseSequentialStream).
+ */
+static size_t _channelwrite(void *instance, const uint8_t *bp, size_t n)
+{
+  if (((AosShellChannel*)instance)->flags & AOS_SHELLCHANNEL_OUTPUT_ENABLED) {
+    return streamWrite(((AosShellChannel*)instance)->iochannel->asyncchannel, bp, n);
+  } else {
+    return 0;
+  }
+}
+
+/**
+ * @brief   Implementation of the BaseAsynchronous read() method (inherited from BaseSequentialStream).
+ */
+static size_t _channelread(void *instance, uint8_t *bp, size_t n)
+{
+  return streamRead(((AosShellChannel*)instance)->iochannel->asyncchannel, bp, n);
+}
+
+/**
+ * @brief   Implementation of the BaseAsynchronous put() method (inherited from BaseSequentialStream).
+ */
+static msg_t _channelput(void *instance, uint8_t b)
+{
+  if (((AosShellChannel*)instance)->flags & AOS_SHELLCHANNEL_OUTPUT_ENABLED) {
+    return streamPut(((AosShellChannel*)instance)->iochannel->asyncchannel, b);
+  } else {
+    return MSG_RESET;
+  }
+}
+
+/**
+ * @brief   Implementation of the BaseAsynchronous get() method (inherited from BaseSequentialStream).
+ */
+static msg_t _channelget(void *instance)
+{
+  return streamGet(((AosShellChannel*)instance)->iochannel->asyncchannel);
+}
+
+/**
+ * @brief   Implementation of the BaseAsynchronous putt() method.
+ */
+static msg_t _channelputt(void *instance, uint8_t b, systime_t time)
+{
+  if (((AosShellChannel*)instance)->flags & AOS_SHELLCHANNEL_OUTPUT_ENABLED) {
+    return chnPutTimeout(((AosShellChannel*)instance)->iochannel->asyncchannel, b, time);
+  } else {
+    return MSG_RESET;
+  }
+}
+
+/**
+ * @brief   Implementation of the BaseAsynchronous gett() method.
+ */
+static msg_t _channelgett(void *instance, systime_t time)
+{
+  return chnGetTimeout(((AosShellChannel*)instance)->iochannel->asyncchannel, time);
+}
+
+/**
+ * @brief   Implementation of the BaseAsynchronous writet() method.
+ */
+static size_t _channelwritet(void *instance, const uint8_t *bp, size_t n, systime_t time)
+{
+  if (((AosShellChannel*)instance)->flags & AOS_SHELLCHANNEL_OUTPUT_ENABLED) {
+    return chnWriteTimeout(((AosShellChannel*)instance)->iochannel->asyncchannel, bp, n, time);
+  } else {
+    return 0;
+  }
+}
+
+/**
+ * @brief   Implementation of the BaseAsynchronous readt() method.
+ */
+static size_t _channelreadt(void *instance, uint8_t *bp, size_t n, systime_t time)
+{
+  return chnReadTimeout(((AosShellChannel*)instance)->iochannel->asyncchannel, bp, n, time);
+}
+
+static const struct AosShellChannelVMT _channelvmt = {
+  _channelwrite,
+  _channelread,
+  _channelput,
+  _channelget,
+  _channelputt,
+  _channelgett,
+  _channelwritet,
+  _channelreadt,
+};
+
+static size_t _streamwrite(void *instance, const uint8_t *bp, size_t n)
+{
+  aosDbgCheck(instance != NULL);
+
+  // local variables
+  AosShellChannel* channel = ((AosShellStream*)instance)->channel;
+  size_t bytes;
+  size_t maxbytes = 0;
+
+  // iterate through the list of channels
+  while (channel != NULL) {
+    bytes = streamWrite(channel, bp, n);
+    maxbytes = (bytes > maxbytes) ? bytes : maxbytes;
+    channel = channel->next;
+  }
+
+  return maxbytes;
+}
+
+static size_t _stremread(void *instance, uint8_t *bp, size_t n)
+{
+  (void)instance;
+  (void)bp;
+  (void)n;
+
+  return 0;
+}
+
+static msg_t _streamput(void *instance, uint8_t b)
+{
+  aosDbgCheck(instance != NULL);
+
+  // local variables
+  AosShellChannel* channel = ((AosShellStream*)instance)->channel;
+  msg_t ret;
+
+  // iterate through the list of channels
+  while (channel != NULL) {
+    ret = streamPut(channel, b);
+    if (ret != MSG_OK) {
+      return ret;
+    }
+    channel = channel->next;
+  }
+
+  return MSG_OK;
+}
+
+static msg_t _streamget(void *instance)
+{
+  (void)instance;
+
+  return 0;
+}
+
+static const struct AosShellStreamVMT _streamvmt = {
+  _streamwrite,
+  _stremread,
+  _streamput,
+  _streamget,
+};
 
 /**
  * @brief   Enumerator of special keyboard keys.
@@ -64,7 +230,6 @@ typedef enum charmatch {
 static void _printPrompt(aos_shell_t* shell)
 {
   aosDbgCheck(shell != NULL);
-  aosDbgCheck(shell->stream != NULL);
 
   // print the system uptime before prompt is configured
   if (shell->config & AOS_SHELL_CONFIG_PROMPT_UPTIME) {
@@ -72,20 +237,20 @@ static void _printPrompt(aos_shell_t* shell)
     aos_timestamp_t uptime;
     aosSysGetUptime(&uptime);
 
-    chprintf(shell->stream, "[%01u:%02u:%02u:%02u:%03u:%03u] ",
-           (uint32_t)(uptime / MICROSECONDS_PER_DAY),
-           (uint8_t)(uptime % MICROSECONDS_PER_DAY / MICROSECONDS_PER_HOUR),
-           (uint8_t)(uptime % MICROSECONDS_PER_HOUR / MICROSECONDS_PER_MINUTE),
-           (uint8_t)(uptime % MICROSECONDS_PER_MINUTE / MICROSECONDS_PER_SECOND),
-           (uint16_t)(uptime % MICROSECONDS_PER_SECOND / MICROSECONDS_PER_MILLISECOND),
-           (uint16_t)(uptime % MICROSECONDS_PER_MILLISECOND / MICROSECONDS_PER_MICROSECOND));
+    chprintf((BaseSequentialStream*)&shell->stream, "[%01u:%02u:%02u:%02u:%03u:%03u] ",
+             (uint32_t)(uptime / MICROSECONDS_PER_DAY),
+             (uint8_t)(uptime % MICROSECONDS_PER_DAY / MICROSECONDS_PER_HOUR),
+             (uint8_t)(uptime % MICROSECONDS_PER_HOUR / MICROSECONDS_PER_MINUTE),
+             (uint8_t)(uptime % MICROSECONDS_PER_MINUTE / MICROSECONDS_PER_SECOND),
+             (uint16_t)(uptime % MICROSECONDS_PER_SECOND / MICROSECONDS_PER_MILLISECOND),
+             (uint16_t)(uptime % MICROSECONDS_PER_MILLISECOND / MICROSECONDS_PER_MICROSECOND));
   }
 
   // print the actual prompt string
   if (shell->prompt && !(shell->config & AOS_SHELL_CONFIG_PROMPT_MINIMAL)) {
-    chprintf(shell->stream, "%s$ ", shell->prompt);
+    chprintf((BaseSequentialStream*)&shell->stream, "%s$ ", shell->prompt);
   } else {
-    chprintf(shell->stream, "%>$ ");
+    chprintf((BaseSequentialStream*)&shell->stream, "%>$ ");
   }
 
   return;
@@ -214,20 +379,19 @@ static special_key_t _interpreteEscapeSequence(const char seq[])
 static int _moveCursor(aos_shell_t* shell, const size_t from, const size_t to)
 {
   aosDbgCheck(shell != NULL);
-  aosDbgCheck(shell->stream != NULL);
 
   // local variables
   size_t pos = from;
 
   // move cursor left by printing backspaces
   while (pos > to) {
-    streamPut(shell->stream, '\b');
+    streamPut(&shell->stream, '\b');
     --pos;
   }
 
   // move cursor right by printing line content
   while (pos < to) {
-    streamPut(shell->stream, shell->line[pos]);
+    streamPut(&shell->stream, shell->line[pos]);
     ++pos;
   }
 
@@ -246,13 +410,12 @@ static int _moveCursor(aos_shell_t* shell, const size_t from, const size_t to)
 static inline size_t _printLine(aos_shell_t* shell, const size_t from, const size_t to)
 {
   aosDbgCheck(shell != NULL);
-  aosDbgCheck(shell->stream != NULL);
 
   // local variables
   size_t cnt;
 
   for (cnt = 0; from + cnt < to; ++cnt) {
-    streamPut(shell->stream, shell->line[from + cnt]);
+    streamPut(&shell->stream, shell->line[from + cnt]);
   }
 
   return cnt;
@@ -363,185 +526,188 @@ static int _strccmp(const char *str1, const char *str2, bool cs, size_t* n, char
   return _mapAscii2Custom(str1[i]) - _mapAscii2Custom(str2[i]);
 }
 
-/**
- * @brief   Reads a line from input stream
- * @details The line is directly written to the given shell object.
- *
- * @param[in] shell   Pointer to the shell object.
- *
- * @return              A status indicator.
- * @retval AOS_SUCCESS  Input sucessfully read, line is valid.
- * @retval AOS_ERROR    An I/O error occurred.
- */
-static aos_status_t _readLine(aos_shell_t* shell)
+static aos_status_t _readChannel(aos_shell_t* shell, AosShellChannel* channel, size_t* n)
 {
   aosDbgCheck(shell != NULL);
-
-  /*
-   * Enumerator to encode a function.
-   */
-  typedef enum {
-    READ_CHAR,
-    AUTOFILL,
-    SUGGEST,
-    INS_TOGGLE,
-    DELETE_FORWARD,
-    DELETE_BACKWARD,
-    RECALL_LAST,
-    CLEAR,
-    CURSOR2START,
-    CURSOR2END,
-    CURSOR_LEFT,
-    CURSOR_RIGHT,
-    EXECUTE,
-    ESC_START,
-    NONE,
-  } func_t;
+  aosDbgCheck(channel != NULL);
+  aosDbgCheck(n != NULL);
 
   // local variables
-  func_t func = NONE;
-  func_t lastfunc = NONE;
-  bool noinput = true;
-  size_t lineend = 0;
-  size_t cursorpos = 0;
+  aos_shellaction_t action = AOS_SHELL_ACTION_NONE;
   char c;
-  uint8_t escp = 0;
-  char escseq[5] = {'\0'};
 
-  // read character by character from stream
-  while (streamRead(shell->stream, (uint8_t*)&c, 1)) {
+  // initialize output variables
+  *n = 0;
+
+  // read character by character from the channel
+  while (chnReadTimeout(channel, (uint8_t*)&c, 1, TIME_IMMEDIATE)) {
     special_key_t key = KEY_UNKNOWN;
 
     // parse escape sequence
-    if (escp > 0) {
-      escseq[escp] = c;
-      ++escp;
-      key = _interpreteEscapeSequence(escseq);
+    if (shell->inputdata.escp > 0) {
+      shell->inputdata.escseq[shell->inputdata.escp] = c;
+      ++shell->inputdata.escp;
+      key = _interpreteEscapeSequence(shell->inputdata.escseq);
       if (key == KEY_AMBIGUOUS) {
         // read next byte to resolve ambiguity
         continue;
       } else {
-        // if the escape sequence could either be parsed sucessfully
-        // or there is no match (KEY_UNKNOWN),
-        // reset the sequence variables and interprete key/character
-        escp = 0;
-        memset(escseq, '\0', sizeof(escseq));
+        /*
+         * If the escape sequence could either be parsed sucessfully
+         * or there is no match (KEY_UNKNOWN),
+         * reset the sequence variable and interprete key/character
+         */
+        shell->inputdata.escp = 0;
+        memset(shell->inputdata.escseq, '\0', sizeof(shell->inputdata.escseq)*sizeof(shell->inputdata.escseq[0]));
       }
     }
 
-    // interprete keys or characters
+    /* interprete keys or character */
     {
-      func = NONE; // default
-      if (key == KEY_UNKNOWN &&
-          (/* printable character */ c >= '\x20' && c <= '\x7E') ) {
-        func = READ_CHAR;
-      } else if (key == KEY_TAB ||
-                 /* horizontal tab ('\t') */ c == '\x09') {
-        // pressing tab once applies auto fill,
-        // presing a second time prints suggestions
-        if (lastfunc == AUTOFILL || lastfunc == SUGGEST) {
-          func = SUGGEST;
+      // default
+      action = AOS_SHELL_ACTION_NONE;
+
+      // printable character
+      if (key == KEY_UNKNOWN && c >= '\x20' && c <= '\x7E') {
+        action = AOS_SHELL_ACTION_READCHAR;
+      }
+
+      // tab key or character
+      else if (key == KEY_TAB || c == '\x09') {
+        /*
+         * pressing tab once applies auto fill
+         * pressing tab a second time prints suggestions
+         */
+        if (shell->inputdata.lastaction == AOS_SHELL_ACTION_AUTOFILL || shell->inputdata.lastaction == AOS_SHELL_ACTION_SUGGEST) {
+          action = AOS_SHELL_ACTION_SUGGEST;
         } else {
-          func = AUTOFILL;
+          action = AOS_SHELL_ACTION_AUTOFILL;
         }
-      } else if (key == KEY_INSERT) {
-        func = INS_TOGGLE;
-      } else if (key == KEY_DELETE ||
-                 /* [DEL] */ c == '\x7F') {
-        // ignore of cursor is very right
-        if (cursorpos < lineend) {
-          func = DELETE_FORWARD;
+      }
+
+      // INS key
+      else if (key == KEY_INSERT) {
+        action = AOS_SHELL_ACTION_INSERTTOGGLE;
+      }
+
+      // DEL key or character
+      else if (key == KEY_DELETE || c == '\x7F') {
+        // ignore if cursor is at very right
+        if (shell->inputdata.cursorpos < shell->inputdata.lineend) {
+          action = AOS_SHELL_ACTION_DELETEFORWARD;
         }
-      } else if (key == KEY_BACKSPACE ||
-                 /* backpace ('\b') */c == '\x08') {
-        // ignore if cursor is very left
-        if (cursorpos > 0) {
-          func = DELETE_BACKWARD;
+      }
+
+      // backspace key or character
+      else if (key == KEY_BACKSPACE || c == '\x08') {
+        // ignore if cursor is at very left
+        if (shell->inputdata.cursorpos > 0) {
+          action = AOS_SHELL_ACTION_DELETEBACKWARD;
         }
-      } else if (key == KEY_PAGE_UP ||
-                 key == KEY_ARROW_UP) {
+      }
+
+      // 'page up' of 'arrow up' key
+      else if (key == KEY_PAGE_UP || key == KEY_ARROW_UP) {
         // ignore if there was some input
-        if (noinput) {
-          func = RECALL_LAST;
+        if (shell->inputdata.noinput) {
+          action = AOS_SHELL_ACTION_RECALLLAST;
         }
-      } else if (key == KEY_PAGE_DOWN ||
-                 key == KEY_ARROW_DOWN ||
-                 /* end of test */ c == '\x03' ||
-                 /* end of transmission */ c == '\x04') {
+      }
+
+      // 'page down' key, 'arrow done' key, 'end of test' character or 'end of transmission' character
+      else if (key == KEY_PAGE_DOWN || key == KEY_ARROW_DOWN || c == '\x03' || c == '\x03') {
         // ignore if line is empty
-        if (lineend > 0) {
-          func = CLEAR;
+        if (shell->inputdata.lineend > 0) {
+          action = AOS_SHELL_ACTION_CLEAR;
         }
-      } else if (key == KEY_HOME) {
+      }
+
+      // 'home' key
+      else if (key == KEY_HOME) {
         // ignore if cursor is very left
-        if (cursorpos > 0) {
-          func = CURSOR2START;
+        if (shell->inputdata.cursorpos > 0) {
+          action = AOS_SHELL_ACTION_CURSOR2START;
         }
-      } else if (key == KEY_END) {
-        // ignore if cursor is very right
-        if (cursorpos < lineend) {
-          func = CURSOR2END;
+      }
+
+      // 'end' key
+      else if (key == KEY_END) {
+        // ignore if cursos is very right
+        if (shell->inputdata.cursorpos < shell->inputdata.lineend) {
+          action = AOS_SHELL_ACTION_CURSOR2END;
         }
-      } else if (key == KEY_ARROW_LEFT) {
+      }
+
+      // 'arrow left' key
+      else if (key == KEY_ARROW_LEFT) {
         // ignore if cursor is very left
-        if (cursorpos > 0) {
-          func = CURSOR_LEFT;
+        if (shell->inputdata.cursorpos > 0) {
+          action = AOS_SHELL_ACTION_CURSORLEFT;
         }
-      } else if (key == KEY_ARROW_RIGHT) {
-        // ignore if cursor is very right
-        if (cursorpos < lineend) {
-          func = CURSOR_RIGHT;
+      }
+
+      // 'arrow right' key
+      else if (key == KEY_ARROW_RIGHT) {
+        // irgnore if cursor is very right
+        if (shell->inputdata.cursorpos < shell->inputdata.lineend) {
+          action = AOS_SHELL_ACTION_CURSORRIGHT;
         }
-      } else if (/* carriage return ('\r') */c == '\x0D' ||
-                 /* line feed ('\n') */ c == '\x0A') {
-        func = EXECUTE;
-      } else if (key == KEY_ESCAPE ||
-                 /* [ESCAPE] */ c == '\x1B') {
-        func = ESC_START;
+      }
+
+      // carriage return ('\r') or line feed ('\n') character
+      else if (c == '\x0D' || c == '\x0A') {
+        action = AOS_SHELL_ACTION_EXECUTE;
+      }
+
+      // ESC key or [ESCAPE] character
+      else if (key == KEY_ESCAPE || c == '\x1B') {
+        action = AOS_SHELL_ACTION_ESCSTART;
       }
     }
 
     /* handle function */
-    switch (func) {
-      case READ_CHAR:
+    switch (action) {
+      case AOS_SHELL_ACTION_READCHAR:
+      {
         // line is full
-        if (lineend + 1 >= shell->linesize) {
-          _moveCursor(shell, cursorpos, lineend);
-          chprintf(shell->stream, "\n\tmaximum line width reached\n");
+        if (shell->inputdata.lineend + 1 >= shell->linesize) {
+          _moveCursor(shell, shell->inputdata.cursorpos, shell->inputdata.lineend);
+          chprintf((BaseSequentialStream*)&shell->stream, "\n\tmaximum line width reached\n");
           _printPrompt(shell);
-          _printLine(shell, 0, lineend);
-          _moveCursor(shell, lineend, cursorpos);
+          _printLine(shell, 0, shell->inputdata.lineend);
+          _moveCursor(shell, shell->inputdata.lineend, shell->inputdata.cursorpos);
         }
         // read character
         else {
           // clear old line content on first input
-          if (noinput) {
+          if (shell->inputdata.noinput) {
             memset(shell->line, '\0', shell->linesize);
-            noinput = false;
+            shell->inputdata.noinput = false;
           }
           // overwrite content
           if (shell->config & AOS_SHELL_CONFIG_INPUT_OVERWRITE) {
-            shell->line[cursorpos] = c;
-            ++cursorpos;
-            lineend = (cursorpos > lineend) ? cursorpos : lineend;
-            streamPut(shell->stream, c);
+            shell->line[shell->inputdata.cursorpos] = c;
+            ++shell->inputdata.cursorpos;
+            shell->inputdata.lineend = (shell->inputdata.cursorpos > shell->inputdata.lineend) ? shell->inputdata.cursorpos : shell->inputdata.lineend;
+            streamPut(&shell->stream, (uint8_t)c);
           }
           // insert character
           else {
-            memmove(&(shell->line[cursorpos+1]), &(shell->line[cursorpos]), lineend - cursorpos);
-            shell->line[cursorpos] = c;
-            ++lineend;
-            _printLine(shell, cursorpos, lineend);
-            ++cursorpos;
-            _moveCursor(shell, lineend, cursorpos);
+            memmove(&(shell->line[shell->inputdata.cursorpos+1]), &(shell->line[shell->inputdata.cursorpos]), shell->inputdata.lineend - shell->inputdata.cursorpos);
+            shell->line[shell->inputdata.cursorpos] = c;
+            ++shell->inputdata.lineend;
+            _printLine(shell, shell->inputdata.cursorpos, shell->inputdata.lineend);
+            ++shell->inputdata.cursorpos;
+            _moveCursor(shell, shell->inputdata.lineend, shell->inputdata.cursorpos);
           }
         }
         break;
+      }
 
-      case AUTOFILL:
+      case AOS_SHELL_ACTION_AUTOFILL:
       {
         const char* fill = shell->line;
-        size_t cmatch = cursorpos;
+        size_t cmatch = shell->inputdata.cursorpos;
         charmatch_t matchlevel = CHAR_MATCH_NOT;
         size_t n;
         // iterate through command list
@@ -556,18 +722,18 @@ static aos_status_t _readLine(aos_shell_t* shell)
                               strlen(cmd->name) - n :
                               0;
           // if an exact match was found
-          if (cmatch + cmp == cursorpos) {
-            cmatch = cursorpos;
+          if (cmatch + cmp == shell->inputdata.cursorpos) {
+            cmatch = shell->inputdata.cursorpos;
             fill = cmd->name;
             // break the loop only if there are no case mismatches with the input
-            n = cursorpos;
+            n = shell->inputdata.cursorpos;
             _strccmp(fill, shell->line, false, &n, &mlvl);
             if (mlvl == CHAR_MATCH_CASE) {
               break;
             }
           }
           // if a not exact match was found
-          else if (cmatch + cmp > cursorpos) {
+          else if (cmatch + cmp > shell->inputdata.cursorpos) {
             // if this is the first one
             if (fill == shell->line) {
               cmatch += cmp;
@@ -585,47 +751,47 @@ static aos_status_t _readLine(aos_shell_t* shell)
         n = cmatch;
         _strccmp(shell->line, fill, shell->config & AOS_SHELL_CONFIG_MATCH_CASE, &n, &matchlevel);
         // print the auto fill if any
-        if (cmatch > cursorpos || (cmatch == cursorpos && matchlevel == CHAR_MATCH_NCASE)) {
-          noinput = false;
+        if (cmatch > shell->inputdata.cursorpos || (cmatch == shell->inputdata.cursorpos && matchlevel == CHAR_MATCH_NCASE)) {
+          shell->inputdata.noinput = false;
           // limit auto fill so it will not overflow the line width
-          if (lineend + (cmatch - cursorpos) > shell->linesize) {
-            cmatch = shell->linesize - lineend + cursorpos;
+          if (shell->inputdata.lineend + (cmatch - shell->inputdata.cursorpos) > shell->linesize) {
+            cmatch = shell->linesize - shell->inputdata.lineend + shell->inputdata.cursorpos;
           }
           // move trailing memory further in the line
-          memmove(&(shell->line[cmatch]), &(shell->line[cursorpos]), lineend - cursorpos);
-          lineend += cmatch - cursorpos;
+          memmove(&(shell->line[cmatch]), &(shell->line[shell->inputdata.cursorpos]), shell->inputdata.lineend - shell->inputdata.cursorpos);
+          shell->inputdata.lineend += cmatch - shell->inputdata.cursorpos;
           // if there was no incorrect case when matching
           if (matchlevel == CHAR_MATCH_CASE) {
             // insert fill command name to line
-            memcpy(&(shell->line[cursorpos]), &(fill[cursorpos]), cmatch - cursorpos);
+            memcpy(&(shell->line[shell->inputdata.cursorpos]), &(fill[shell->inputdata.cursorpos]), cmatch - shell->inputdata.cursorpos);
             // print the output
-            _printLine(shell, cursorpos, lineend);
+            _printLine(shell, shell->inputdata.cursorpos, shell->inputdata.lineend);
           } else {
             // overwrite line with fill command name
             memcpy(shell->line, fill, cmatch);
             // reprint the whole line
-            _moveCursor(shell, cursorpos, 0);
-            _printLine(shell, 0, lineend);
+            _moveCursor(shell, shell->inputdata.cursorpos, 0);
+            _printLine(shell, 0, shell->inputdata.lineend);
           }
           // move cursor to the end of the matching sequence
-          cursorpos = cmatch;
-          _moveCursor(shell, lineend, cursorpos);
+          shell->inputdata.cursorpos = cmatch;
+          _moveCursor(shell, shell->inputdata.lineend, shell->inputdata.cursorpos);
         }
         break;
       }
 
-      case SUGGEST:
+      case AOS_SHELL_ACTION_SUGGEST:
       {
         unsigned int matches = 0;
         // iterate through command list
         for (aos_shellcommand_t* cmd = shell->commands; cmd != NULL; cmd = cmd->next) {
           // compare line content with command, excpet if cursorpos=0
-          size_t i = cursorpos;
-          if (cursorpos > 0) {
+          size_t i = shell->inputdata.cursorpos;
+          if (shell->inputdata.cursorpos > 0) {
             _strccmp(shell->line, cmd->name, true, &i, NULL);
           }
-          const int cmp = (i < cursorpos) ?
-                            (i - cursorpos) :
+          const int cmp = (i < shell->inputdata.cursorpos) ?
+                            (i - shell->inputdata.cursorpos) :
                             (cmd->name[i] != '\0') ?
                               strlen(cmd->name) - i :
                               0;
@@ -633,55 +799,61 @@ static aos_status_t _readLine(aos_shell_t* shell)
           if (cmp > 0) {
             // if this is the first one
             if (matches == 0) {
-              _moveCursor(shell, cursorpos, lineend);
-              streamPut(shell->stream, '\n');
+              _moveCursor(shell, shell->inputdata.cursorpos, shell->inputdata.lineend);
+              streamPut(&shell->stream, '\n');
             }
             // print the command
-            chprintf(shell->stream, "\t%s\n", cmd->name);
+            chprintf((BaseSequentialStream*)&shell->stream, "\t%s\n", cmd->name);
             ++matches;
           }
         }
         // reprint the prompt and line if any matches have been found
         if (matches > 0) {
           _printPrompt(shell);
-          _printLine(shell, 0, lineend);
-          _moveCursor(shell, lineend, cursorpos);
-          noinput = false;
+          _printLine(shell, 0, shell->inputdata.lineend);
+          _moveCursor(shell, shell->inputdata.lineend, shell->inputdata.cursorpos);
+          shell->inputdata.noinput = false;
         }
         break;
       }
 
-      case INS_TOGGLE:
+      case AOS_SHELL_ACTION_INSERTTOGGLE:
+      {
         if (shell->config & AOS_SHELL_CONFIG_INPUT_OVERWRITE) {
           shell->config &= ~AOS_SHELL_CONFIG_INPUT_OVERWRITE;
         } else {
           shell->config |= AOS_SHELL_CONFIG_INPUT_OVERWRITE;
         }
         break;
+      }
 
-      case DELETE_FORWARD:
-        --lineend;
-        memmove(&(shell->line[cursorpos]), &(shell->line[cursorpos+1]), lineend - cursorpos);
-        _printLine(shell, cursorpos, lineend);
-        streamPut(shell->stream, ' ');
-        _moveCursor(shell, lineend + 1, cursorpos);
+      case AOS_SHELL_ACTION_DELETEFORWARD:
+      {
+        --shell->inputdata.lineend;
+        memmove(&(shell->line[shell->inputdata.cursorpos]), &(shell->line[shell->inputdata.cursorpos+1]), shell->inputdata.lineend - shell->inputdata.cursorpos);
+        _printLine(shell, shell->inputdata.cursorpos, shell->inputdata.lineend);
+        streamPut(&shell->stream, ' ');
+        _moveCursor(shell, shell->inputdata.lineend + 1, shell->inputdata.cursorpos);
         break;
+      }
 
-      case DELETE_BACKWARD:
-        --cursorpos;
-        memmove(&(shell->line[cursorpos]), &(shell->line[cursorpos+1]), lineend - cursorpos);
-        --lineend;
-        shell->line[lineend] = '\0';
-        _moveCursor(shell, cursorpos + 1, cursorpos);
-        _printLine(shell, cursorpos, lineend);
-        streamPut(shell->stream, ' ');
-        _moveCursor(shell, lineend+1, cursorpos);
+      case AOS_SHELL_ACTION_DELETEBACKWARD:
+      {
+        --shell->inputdata.cursorpos;
+        memmove(&(shell->line[shell->inputdata.cursorpos]), &(shell->line[shell->inputdata.cursorpos+1]), shell->inputdata.lineend - shell->inputdata.cursorpos);
+        --shell->inputdata.lineend;
+        shell->line[shell->inputdata.lineend] = '\0';
+        _moveCursor(shell, shell->inputdata.cursorpos + 1, shell->inputdata.cursorpos);
+        _printLine(shell, shell->inputdata.cursorpos, shell->inputdata.lineend);
+        streamPut(&shell->stream, ' ');
+        _moveCursor(shell, shell->inputdata.lineend+1, shell->inputdata.cursorpos);
         break;
+      }
 
-      case RECALL_LAST:
+      case AOS_SHELL_ACTION_RECALLLAST:
       {
         // replace any intermediate NUL bytes with spaces
-        lineend = 0;
+        shell->inputdata.lineend = 0;
         size_t nul_start = 0;
         size_t nul_end = 0;
         // search line for a NUL byte
@@ -693,7 +865,7 @@ static aos_status_t _readLine(aos_shell_t* shell)
               if (shell->line[nul_end] != '\0') {
                 // an intermediate NUL sequence was found
                 memset(&(shell->line[nul_start]), ' ', nul_end - nul_start);
-                lineend = nul_end + 1;
+                shell->inputdata.lineend = nul_end + 1;
                 break;
               } else {
                 ++nul_end;
@@ -701,81 +873,94 @@ static aos_status_t _readLine(aos_shell_t* shell)
             }
             nul_start = nul_end + 1;
           } else {
-            ++lineend;
+            ++shell->inputdata.lineend;
             ++nul_start;
           }
         }
-        cursorpos = lineend;
+        shell->inputdata.cursorpos = shell->inputdata.lineend;
         // print the line
-        noinput = _printLine(shell, 0, lineend) == 0;
+        shell->inputdata.noinput = _printLine(shell, 0, shell->inputdata.lineend) == 0;
         break;
       }
 
-      case CLEAR:
+      case AOS_SHELL_ACTION_CLEAR:
+      {
         // clear output
-        _moveCursor(shell, cursorpos, 0);
-        for (cursorpos = 0; cursorpos < lineend; ++cursorpos) {
-          streamPut(shell->stream, ' ');
+        _moveCursor(shell, shell->inputdata.cursorpos, 0);
+        for (shell->inputdata.cursorpos = 0; shell->inputdata.cursorpos < shell->inputdata.lineend; ++shell->inputdata.cursorpos) {
+          streamPut(&shell->stream, ' ');
         }
-        _moveCursor(shell, lineend, 0);
-        cursorpos = 0;
-        lineend = 0;
-        noinput = true;
+        _moveCursor(shell, shell->inputdata.lineend, 0);
+        shell->inputdata.cursorpos = 0;
+        shell->inputdata.lineend = 0;
+        shell->inputdata.noinput = true;
         break;
+      }
 
-      case CURSOR2START:
-        _moveCursor(shell, cursorpos, 0);
-        cursorpos = 0;
+      case AOS_SHELL_ACTION_CURSOR2START:
+      {
+        _moveCursor(shell, shell->inputdata.cursorpos, 0);
+        shell->inputdata.cursorpos = 0;
         break;
+      }
 
-      case CURSOR2END:
-        _moveCursor(shell, cursorpos, lineend);
-        cursorpos = lineend;
+      case AOS_SHELL_ACTION_CURSOR2END:
+      {
+        _moveCursor(shell, shell->inputdata.cursorpos, shell->inputdata.lineend);
+        shell->inputdata.cursorpos = shell->inputdata.lineend;
         break;
+      }
 
-      case CURSOR_LEFT:
-        _moveCursor(shell, cursorpos, cursorpos-1);
-        --cursorpos;
+      case AOS_SHELL_ACTION_CURSORLEFT:
+      {
+        _moveCursor(shell, shell->inputdata.cursorpos, shell->inputdata.cursorpos-1);
+        --shell->inputdata.cursorpos;
         break;
+      }
 
-      case CURSOR_RIGHT:
-        _moveCursor(shell, cursorpos, cursorpos+1);
-        ++cursorpos;
+      case AOS_SHELL_ACTION_CURSORRIGHT:
+      {
+        _moveCursor(shell, shell->inputdata.cursorpos, shell->inputdata.cursorpos+1);
+        ++shell->inputdata.cursorpos;
         break;
+      }
 
-      case EXECUTE:
-        streamPut(shell->stream, '\n');
-        // return a warning if there was no input
-        if (noinput) {
-          return AOS_WARNING;
-        } else {
+      case AOS_SHELL_ACTION_EXECUTE:
+      {
+        streamPut(&shell->stream, '\n');
+        // set the number of read bytes and return
+        if (!shell->inputdata.noinput) {
+          *n = shell->linesize - shell->inputdata.lineend;
           // fill the remainder of the line with NUL bytes
-          memset(&(shell->line[lineend]), '\0', shell->linesize - lineend);
-          return AOS_SUCCESS;
+          memset(&(shell->line[shell->inputdata.lineend]), '\0', *n);
+          // reset static variables
+          shell->inputdata.noinput = true;
         }
+        return AOS_SUCCESS;
         break;
+      }
 
-      case ESC_START:
-        escseq[0] = c;
-        ++escp;
+      case AOS_SHELL_ACTION_ESCSTART:
+      {
+        shell->inputdata.escseq[0] = c;
+        ++shell->inputdata.escp;
         break;
+      }
 
-      case NONE:
+      case AOS_SHELL_ACTION_NONE:
       default:
+      {
         // do nothing (ignore input) and read next byte
         continue;
         break;
-    }
+      }
+    } /* end of switch */
 
-    lastfunc = func;
+    shell->inputdata.lastaction = action;
   } /* end of while */
 
-  /* This code is only executed when some error occurred.
-   * The reason may be:
-   *   - The input stream was disabled (streamRead() returned 0)
-   *   - Parsing of input failed unexpectedly
-   */
-  return AOS_ERROR;
+  // no more data could be read from the channel
+  return AOS_WARNING;
 }
 
 /**
@@ -854,23 +1039,30 @@ static size_t _parseArguments(aos_shell_t* shell)
  * @param[in] arglist       Pointer to the argument buffer.
  * @param[in] arglistsize   Size of te argument buffer.
  */
-void aosShellInit(aos_shell_t* shell, BaseSequentialStream* stream, const char* prompt, char* line, size_t linesize, char** arglist, size_t arglistsize)
+void aosShellInit(aos_shell_t* shell, event_source_t* oseventsource,  const char* prompt, char* line, size_t linesize, char** arglist, size_t arglistsize)
 {
   aosDbgCheck(shell != NULL);
-  aosDbgCheck(stream != NULL);
+  aosDbgCheck(oseventsource != NULL);
   aosDbgCheck(line != NULL);
   aosDbgCheck(arglist != NULL);
 
   // set parameters
   shell->thread = NULL;
   chEvtObjectInit(&shell->eventSource);
-  shell->stream = stream;
+  shell->os.eventSource = oseventsource;
+  aosShellStreamInit(&shell->stream);
   shell->prompt = prompt;
   shell->commands = NULL;
   shell->execstatus.command = NULL;
   shell->execstatus.retval = 0;
   shell->line = line;
   shell->linesize = linesize;
+  shell->inputdata.lastaction = AOS_SHELL_ACTION_NONE;
+  shell->inputdata.escp = 0;
+  memset(shell->inputdata.escseq, '\0', sizeof(shell->inputdata.escseq)*sizeof(shell->inputdata.escseq[0]));
+  shell->inputdata.cursorpos = 0;
+  shell->inputdata.lineend = 0;
+  shell->inputdata.noinput = true;
   shell->arglist = arglist;
   shell->arglistsize = arglistsize;
   shell->config = 0x00;
@@ -880,6 +1072,40 @@ void aosShellInit(aos_shell_t* shell, BaseSequentialStream* stream, const char* 
   for (size_t a = 0; a < shell->arglistsize; ++a) {
     shell->arglist[a] = NULL;
   }
+
+  return;
+}
+
+/**
+ * @brief   Initialize an AosShellStream object.
+ *
+ * @param[in] stream  The AosShellStrem to initialize.
+ */
+void aosShellStreamInit(AosShellStream* stream)
+{
+  aosDbgCheck(stream != NULL);
+
+  stream->vmt = &_streamvmt;
+  stream->channel = NULL;
+
+  return;
+}
+
+/**
+ * @brief   Initialize an AosShellChannel object with the specified parameters.
+ *
+ * @param[in] channel     The AosShellChannel to initialize.
+ * @param[in] iochannel   An AosIOChannel this AosShellChannel is associated with.
+ */
+void aosShellChannelInit(AosShellChannel* channel, AosIOChannel* iochannel)
+{
+  aosDbgCheck(channel != NULL);
+  aosDbgCheck(iochannel != NULL && iochannel->asyncchannel != NULL);
+
+  channel->vmt = &_channelvmt;
+  channel->iochannel = iochannel;
+  channel->next = NULL;
+  channel->flags = 0;
 
   return;
 }
@@ -906,36 +1132,35 @@ aos_status_t aosShellAddCommand(aos_shell_t *shell, aos_shellcommand_t *cmd)
   aos_shellcommand_t** curr = &(shell->commands);
 
   // insert the command to the list wrt lexographical order (exception: lower case characters preceed upper their uppercase counterparts)
-  while (1) {
-    // if the end of the list was reached, append the command
-    if (*curr == NULL) {
-      *curr = cmd;
+  while (*curr != NULL) {
+    // iterate through the list as long as the command names are 'smaller'
+    const int cmp = _strccmp((*curr)->name, cmd->name, true, NULL, NULL);
+    if (cmp < 0) {
+      prev = *curr;
+      curr = &((*curr)->next);
+      continue;
+    }
+    // error if the command already exists
+    else if (cmp == 0) {
+      return AOS_ERROR;
+    }
+    // insert the command as soon as a 'larger' name was found
+    else /* if (cmpval > 0) */ {
+      cmd->next = *curr;
+      // special case: the first command is larger
+      if (prev == NULL) {
+        shell->commands = cmd;
+      } else {
+        prev->next = cmd;
+      }
       return AOS_SUCCESS;
-    } else {
-      // iterate through the list as long as the command names are 'smaller'
-      const int cmp = _strccmp((*curr)->name, cmd->name, true, NULL, NULL);
-      if (cmp < 0) {
-        prev = *curr;
-        curr = &((*curr)->next);
-        continue;
-      }
-      // error if the command already exists
-      else if (cmp == 0) {
-        return AOS_ERROR;
-      }
-      // insert the command as soon as a 'larger' name was found
-      else /* if (cmpval > 0) */ {
-        cmd->next = *curr;
-        // special case: the first command is larger
-        if (prev == NULL) {
-          shell->commands = cmd;
-        } else {
-          prev->next = cmd;
-        }
-        return AOS_SUCCESS;
-      }
     }
   }
+  // the end of the list has been reached
+
+  // append the command
+  *curr = cmd;
+  return AOS_SUCCESS;
 }
 
 /**
@@ -992,6 +1217,127 @@ aos_status_t aosShellRemoveCommand(aos_shell_t *shell, char *cmd, aos_shellcomma
 }
 
 /**
+ * @brief   Add a channel to a AosShellStream.
+ *
+ * @param[in] stream    The AosShellStream to extend.
+ * @param[in] channel   The channel to be added to the stream.
+ */
+void aosShellStreamAddChannel(AosShellStream* stream, AosShellChannel* channel)
+{
+  aosDbgCheck(stream != NULL);
+  aosDbgCheck(channel != NULL && channel->iochannel != NULL && channel->iochannel->asyncchannel != NULL && channel->next == NULL && (channel->flags & AOS_SHELLCHANNEL_ATTACHED) == 0);
+
+  // prepend the new channel
+  chSysLock();
+  channel->flags |= AOS_SHELLCHANNEL_ATTACHED;
+  channel->next = stream->channel;
+  stream->channel = channel;
+  chSysUnlock();
+
+  return;
+}
+
+/**
+ * @brief   Remove a channel from an AosShellStream.
+ *
+ * @param[in] stream    The AosShellStream to modify.
+ * @param[in] channel   The channel to remove.
+ * @return
+ */
+aos_status_t aosShellStreamRemoveChannel(AosShellStream* stream, AosShellChannel* channel)
+{
+  aosDbgCheck(stream != NULL);
+  aosDbgCheck(channel != NULL && channel->iochannel != NULL && channel->iochannel->asyncchannel != NULL && channel->flags & AOS_SHELLCHANNEL_ATTACHED);
+
+  // local varibales
+  AosShellChannel* prev = NULL;
+  AosShellChannel* curr = stream->channel;
+
+  // iterate through the list and search for the specified channel
+  while (curr != NULL) {
+    // if the channel was found
+    if (curr == channel) {
+      chSysLock();
+      // special case: the first channel matches (prev is NULL)
+      if (prev == NULL) {
+        stream->channel = curr->next;
+      } else {
+        prev->next = channel->next;
+      }
+      curr->next = NULL;
+      curr->flags &= ~AOS_SHELLCHANNEL_ATTACHED;
+      chSysUnlock();
+      return AOS_SUCCESS;
+    }
+  }
+
+  // if the channel was not found, return an error
+  return AOS_ERROR;
+}
+
+/**
+ * @brief   Enable a AosSheööChannel as input.
+ *
+ * @param[in] channel   The channel to enable as input.
+ */
+void aosShellChannelInputEnable(AosShellChannel* channel)
+{
+  aosDbgCheck(channel != NULL && channel->iochannel != NULL && channel->iochannel->asyncchannel != NULL);
+
+  chSysLock();
+  channel->listener.wflags |= CHN_INPUT_AVAILABLE;
+  channel->flags |= AOS_SHELLCHANNEL_INPUT_ENABLED;
+  chSysUnlock();
+
+  return;
+}
+
+/**
+ * @brief   Disable a AosSheööChannel as input.
+ *
+ * @param[in] channel   The channel to disable as input.
+ */
+void aosShellChannelInputDisable( AosShellChannel* channel)
+{
+  aosDbgCheck(channel != NULL && channel->iochannel != NULL && channel->iochannel->asyncchannel != NULL);
+
+  chSysLock();
+  channel->listener.wflags &= ~CHN_INPUT_AVAILABLE;
+  channel->flags &= ~AOS_SHELLCHANNEL_INPUT_ENABLED;
+  chSysUnlock();
+
+  return;
+}
+
+/**
+ * @brief   Enable a AosSheööChannel as output.
+ *
+ * @param[in] channel   The channel to enable as output.
+ */
+void aosShellChannelOutputEnable(AosShellChannel* channel)
+{
+  aosDbgCheck(channel != NULL && channel->iochannel != NULL && channel->iochannel->asyncchannel != NULL);
+
+  channel->flags |= AOS_SHELLCHANNEL_OUTPUT_ENABLED;
+
+  return;
+}
+
+/**
+ * @brief   Disable a AosSheööChannel as output.
+ *
+ * @param[in] channel   The channel to disable as output.
+ */
+void aosShellChannelOutputDisable(AosShellChannel* channel)
+{
+  aosDbgCheck(channel != NULL && channel->iochannel != NULL && channel->iochannel->asyncchannel != NULL);
+
+  channel->flags &= ~AOS_SHELLCHANNEL_OUTPUT_ENABLED;
+
+  return;
+}
+
+/**
  * @brief   Thread main function.
  *
  * @param[in] aosShellThread    Name of the function;
@@ -1002,66 +1348,127 @@ THD_FUNCTION(aosShellThread, shell)
   aosDbgCheck(shell != NULL);
 
   // local variables
+  eventmask_t eventmask;
+  eventflags_t eventflags;
+  AosShellChannel* channel;
+  aos_status_t readeval;
+  size_t nchars = 0;
   size_t nargs = 0;
-  aos_status_t readlval;
+  aos_shellcommand_t* cmd;
+
+
+  // register OS related events
+  chEvtRegisterMask(((aos_shell_t*)shell)->os.eventSource, &(((aos_shell_t*)shell)->os.eventListener), AOS_SHELL_EVENTMASK_OS);
+  // register events to all input channels
+  for (channel = ((aos_shell_t*)shell)->stream.channel; channel != NULL; channel = channel->next) {
+    chEvtRegisterMaskWithFlags(&(channel->iochannel->asyncchannel->event), &(channel->listener), AOS_SHELL_EVENTMASK_INPUT, channel->listener.wflags);
+  }
 
   // fire start event
   chEvtBroadcastFlags(&(((aos_shell_t*)shell)->eventSource), AOS_SHELL_EVTFLAG_START);
 
+  // print the prompt for the first time
+  _printPrompt((aos_shell_t*)shell);
+
   // enter thread loop
   while (!chThdShouldTerminateX()) {
-    // print the prompt
-    _printPrompt((aos_shell_t*)shell);
+    // wait for event and handle it accordingly
+    eventmask = chEvtWaitOne(ALL_EVENTS);
 
-    // read input line
-    readlval = _readLine((aos_shell_t*)shell);
-    if (readlval == AOS_ERROR) {
-      // emit an error event
-      chEvtBroadcastFlags(&(((aos_shell_t*)shell)->eventSource), AOS_SHELL_EVTFLAG_IOERROR);
-      // erither break the loop or try again afte some time
-      if (chThdShouldTerminateX()) {
-        break;
-      } else {
-        aosThdSSleep(1);
-      }
-    }
+    // handle event
+    switch (eventmask) {
 
-    // parse input line to arguments only if reading the line was successful
-    nargs = (readlval == AOS_SUCCESS) ? _parseArguments((aos_shell_t*)shell) : 0;
-    if (nargs > ((aos_shell_t*)shell)->arglistsize) {
-      // error: too many arguments
-      chprintf(((aos_shell_t*)shell)->stream, "\tERROR: too many arguments\n");
-      continue;
-    }
-
-    // skip if there are no arguments
-    if (nargs > 0) {
-      // search command list for arg[0] and execure callback function
-      aos_shellcommand_t* cmd = ((aos_shell_t*)shell)->commands;
-      while (cmd != NULL) {
-        if (strcmp(((aos_shell_t*)shell)->arglist[0], cmd->name) == 0) {
-          ((aos_shell_t*)shell)->execstatus.command = cmd;
-          chEvtBroadcastFlags(&(((aos_shell_t*)shell)->eventSource), AOS_SHELL_EVTFLAG_EXEC);
-          ((aos_shell_t*)shell)->execstatus.retval = cmd->callback(((aos_shell_t*)shell)->stream, nargs, ((aos_shell_t*)shell)->arglist);
-          chEvtBroadcastFlags(&(((aos_shell_t*)shell)->eventSource), AOS_SHELL_EVTFLAG_DONE);
-          // append a line break so the next print will start from the very left
-          // usually this should just add an empty line, which is visually appealing
-          chprintf(((aos_shell_t*)shell)->stream, "\n");
-          // notify if the command was not successful
-          if (((aos_shell_t*)shell)->execstatus.retval != 0) {
-            chprintf(((aos_shell_t*)shell)->stream, "command returned exit status %d\n", ((aos_shell_t*)shell)->execstatus.retval);
-          }
-          break;
+      // OS related events
+      case AOS_SHELL_EVENTMASK_OS:
+      {
+        eventflags = chEvtGetAndClearFlags(&((aos_shell_t*)shell)->os.eventListener);
+        // handle shutdown/restart events
+        if (eventflags & AOS_SYSTEM_EVENTFLAGS_SHUTDOWN) {
+          chThdTerminate(((aos_shell_t*)shell)->thread);
+        } else {
+          // print an error message
+          chprintf((BaseSequentialStream*)&((aos_shell_t*)shell)->stream, "\nERROR: unknown OS event received (0x%08X)\n", eventflags);
         }
-        cmd = cmd->next;
+        break;
       }
-      // if no matching command was found, print an error
-      if (cmd == NULL) {
-        chprintf(((aos_shell_t*)shell)->stream, "%s: command not found\n", ((aos_shell_t*)shell)->arglist[0]);
-      }
-    }
 
-  } /* end of while loop */
+      // input events
+      case AOS_SHELL_EVENTMASK_INPUT:
+      {
+        // check and handle all channels
+        channel = ((aos_shell_t*)shell)->stream.channel;
+        while (channel != NULL) {
+          eventflags = chEvtGetAndClearFlags(&channel->listener);
+          // if there is new input
+          if (eventflags & CHN_INPUT_AVAILABLE) {
+            // if the channel is configured as input
+            if (channel->flags & AOS_SHELLCHANNEL_INPUT_ENABLED) {
+              // read input from channel
+              readeval = _readChannel((aos_shell_t*)shell, channel, &nchars);
+              // parse input line to argument list only if the input shall be executed
+              nargs = (readeval == AOS_SUCCESS && nchars > 0) ? _parseArguments((aos_shell_t*)shell) : 0;
+              // check number of arguments
+              if (nargs > ((aos_shell_t*)shell)->arglistsize) {
+                // error too many arguments
+                chprintf((BaseSequentialStream*)&((aos_shell_t*)shell)->stream, "\ttoo many arguments\n");
+              } else if (nargs > 0) {
+                // search command list for arg[0] and execute callback
+                cmd = ((aos_shell_t*)shell)->commands;
+                while (cmd != NULL) {
+                  if (strcmp(((aos_shell_t*)shell)->arglist[0], cmd->name) == 0) {
+                    ((aos_shell_t*)shell)->execstatus.command = cmd;
+                    chEvtBroadcastFlags(&(((aos_shell_t*)shell)->eventSource), AOS_SHELL_EVTFLAG_EXEC);
+                    ((aos_shell_t*)shell)->execstatus.retval = cmd->callback((BaseSequentialStream*)&((aos_shell_t*)shell)->stream, nargs, ((aos_shell_t*)shell)->arglist);
+                    chEvtBroadcastFlags(&(((aos_shell_t*)shell)->eventSource), AOS_SHELL_EVTFLAG_DONE);
+                    // notify if the command was not successful
+                    if (((aos_shell_t*)shell)->execstatus.retval != 0) {
+                      chprintf((BaseSequentialStream*)&((aos_shell_t*)shell)->stream, "command returned exit status %d\n", ((aos_shell_t*)shell)->execstatus.retval);
+                    }
+                    break;
+                  }
+                  cmd = cmd->next;
+                } /* end of while */
+
+                // if no matching command was found, print an error
+                if (cmd == NULL) {
+                  chprintf((BaseSequentialStream*)&((aos_shell_t*)shell)->stream, "%s: command not found\n", ((aos_shell_t*)shell)->arglist[0]);
+                }
+              }
+
+              // rreset some internal variables and eprint a new prompt
+              if (readeval == AOS_SUCCESS && !chThdShouldTerminateX()) {
+                ((aos_shell_t*)shell)->inputdata.cursorpos = 0;
+                ((aos_shell_t*)shell)->inputdata.lineend = 0;
+                _printPrompt((aos_shell_t*)shell);
+              }
+            }
+            // if the channel is not configured as input
+            else {
+              // read but drop all data
+              uint8_t c;
+              while (chnReadTimeout(channel, &c, 1, TIME_IMMEDIATE)) {
+                continue;
+              }
+            }
+          }
+
+          // iterate to next channel
+          channel = channel->next;
+        }
+        break;
+      }
+
+      // other events
+      default:
+      {
+        // print an error message
+        chprintf((BaseSequentialStream*)&((aos_shell_t*)shell)->stream, "\nERROR: unknown event received (0x%08X)\n", eventmask);
+        break;
+      }
+
+    } /* end of switch */
+
+  } /* end of while */
 
   // fire event and exit the thread
   chSysLock();
@@ -1069,3 +1476,5 @@ THD_FUNCTION(aosShellThread, shell)
   chThdExitS(MSG_OK);
   // no chSysUnlock() required since the thread has been terminated an all waiting threads have been woken up
 }
+
+#endif /* AMIROOS_CFG_SHELL_ENABLE == true */

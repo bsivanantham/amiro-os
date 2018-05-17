@@ -37,6 +37,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #define SYSTEM_INFO_WIDTH             70
 
+/**
+ * @brief   Width of the name column of the system info table.
+ */
+#define SYSTEM_INFO_NAMEWIDTH         14
+
 /* forward declarations */
 static void _printSystemInfo(BaseSequentialStream* stream);
 #if (AMIROOS_CFG_SHELL_ENABLE == true)
@@ -57,11 +62,6 @@ static apalControlGpio_t* _gpioPd;
  * @brief   Sync signal GPIO.
  */
 static apalControlGpio_t* _gpioSync;
-
-/**
- * @brief   Sequelntiel Stream Multiplexer for the system I/O stream.
- */
-static SequentialStreamMux _ssm;
 
 /**
  * @brief   Timer to accumulate system uptime.
@@ -154,31 +154,33 @@ static aos_shellcommand_t _shellcmd_kerneltest = {
  * @brief   Global system object.
  */
 aos_system_t aos = {
-  /* SSSP stage */ AOS_SSSP_STARTUP_2_1,
-  /* event      */ {
-    /* I/O      */ {
+  /* SSSP stage       */ AOS_SSSP_STARTUP_2_1,
+  /* I/O stream       */ {
+    /* channel          */ NULL,
+  },
+  /* event            */ {
+    /* I/O              */ {
       /* source           */ {
-        /* next listener  */ NULL,
+        /* next listener    */ NULL,
       },
       /* flagsSignalPd    */ 0,
       /* flagsSignalSync  */ 0,
     },
-    /* OS */ {
-      /* source */ {
-        /* next listener  */ NULL,
+    /* OS               */ {
+      /* source           */ {
+        /* next listener    */ NULL,
       }
     },
   },
-  /* ssm        */ &_ssm,
 #if (AMIROOS_CFG_SHELL_ENABLE == true)
-  /* shell      */ &_shell,
+  /* shell            */ &_shell,
 #endif
 };
 
 /**
  * @brief   Print a separator line.
  *
- * @param[in] stream    Stream to print to.
+ * @param[in] stream    Stream to print to or NULL to print to all system streams.
  * @param[in] c         Character to use.
  * @param[in] n         Length of the separator line.
  *
@@ -204,7 +206,7 @@ static unsigned int _printSystemInfoSeparator(BaseSequentialStream* stream, cons
  *          The combined width of "<name>[spaces]" can be specified in order to align <fmt> on multiple lines.
  *          Note that there is not trailing newline added implicitely.
  *
- * @param[in] stream      Stream to print to.
+ * @param[in] stream      Stream to print to or NULL to print to all system streams.
  * @param[in] name        Name of the entry/line.
  * @param[in] namewidth   Width of the name column.
  * @param[in] fmt         Formatted string of information content.
@@ -214,20 +216,17 @@ static unsigned int _printSystemInfoSeparator(BaseSequentialStream* stream, cons
 static unsigned int _printSystemInfoLine(BaseSequentialStream* stream, const char* name, const unsigned int namewidth, const char* fmt, ...)
 {
   aosDbgCheck(stream != NULL);
-  aosDbgCheck(stream != NULL);
+  aosDbgCheck(name != NULL);
 
   unsigned int n = 0;
+  va_list ap;
 
-  // print the name and trailing spaces
+  va_start(ap, fmt);
   n += chprintf(stream, name);
   while (n < namewidth) {
     streamPut(stream, ' ');
     ++n;
   }
-
-  // print the content
-  va_list ap;
-  va_start(ap, fmt);
   n += chvprintf(stream, fmt, ap);
   va_end(ap);
 
@@ -239,29 +238,30 @@ static unsigned int _printSystemInfoLine(BaseSequentialStream* stream, const cha
  *
  * @param[in] stream    Stream to print to.
  */
-static void _printSystemInfo(BaseSequentialStream *stream)
+static void _printSystemInfo(BaseSequentialStream* stream)
 {
   aosDbgCheck(stream != NULL);
 
   _printSystemInfoSeparator(stream, '=', SYSTEM_INFO_WIDTH);
-  _printSystemInfoLine(stream, "Module", 14, "%s (v%s)\n", BOARD_NAME, BOARD_VERSION);
+  _printSystemInfoLine(stream, "Module", SYSTEM_INFO_NAMEWIDTH, "%s (v%s)\n", BOARD_NAME, BOARD_VERSION);
 #ifdef PLATFORM_NAME
-  _printSystemInfoLine(stream, "Platform", 14, "%s\n", PLATFORM_NAME);
+  _printSystemInfoLine(stream, "Platform", SYSTEM_INFO_NAMEWIDTH, "%s\n", PLATFORM_NAME);
 #endif
 #ifdef PORT_CORE_VARIANT_NAME
-  _printSystemInfoLine(stream, "Core Variant", 14, "%s\n", PORT_CORE_VARIANT_NAME);
+  _printSystemInfoLine(stream, "Core Variant", SYSTEM_INFO_NAMEWIDTH, "%s\n", PORT_CORE_VARIANT_NAME);
 #endif
-  _printSystemInfoLine(stream, "Architecture", 14, "%s\n", PORT_ARCHITECTURE_NAME);
+  _printSystemInfoLine(stream, "Architecture", SYSTEM_INFO_NAMEWIDTH, "%s\n", PORT_ARCHITECTURE_NAME);
   _printSystemInfoSeparator(stream, '-', SYSTEM_INFO_WIDTH);
-  _printSystemInfoLine(stream, "AMiRo-OS" ,14, "%u.%u.%u %s (%s build)\n", AMIROOS_VERSION_MAJOR, AMIROOS_VERSION_MINOR, AMIROOS_VERSION_PATCH, AMIROOS_RELEASE_TYPE, (AMIROOS_CFG_DBG == true) ? "debug" : "release");
-  _printSystemInfoLine(stream, "AMiRo-LLD" ,14, "%u.%u.%u %s (periphAL %u.%u)\n", AMIRO_LLD_VERSION_MAJOR, AMIRO_LLD_VERSION_MINOR, AMIRO_LLD_VERSION_PATCH, AMIRO_LLD_RELEASE_TYPE, PERIPHAL_VERSION_MAJOR, PERIPHAL_VERSION_MINOR);
-  _printSystemInfoLine(stream, "ChibiOS/RT" ,14, "%u.%u.%u %s\n", CH_KERNEL_MAJOR, CH_KERNEL_MINOR, CH_KERNEL_PATCH, (CH_KERNEL_STABLE == 1) ? "stable" : "non-stable");
-  _printSystemInfoLine(stream, "ChibiOS/HAL",14, "%u.%u.%u %s\n", CH_HAL_MAJOR, CH_HAL_MINOR, CH_HAL_PATCH, (CH_HAL_STABLE == 1) ? "stable" : "non-stable");
-  _printSystemInfoLine(stream, "Compiler" ,14, "%s %u.%u.%u\n", "GCC", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__); // TODO: support other compilers than GCC
-  _printSystemInfoLine(stream, "Compiled" ,14, "%s - %s\n", __DATE__, __TIME__);
+  _printSystemInfoLine(stream, "AMiRo-OS" ,SYSTEM_INFO_NAMEWIDTH, "%u.%u.%u %s (SSSP %u.%u)\n", AMIROOS_VERSION_MAJOR, AMIROOS_VERSION_MINOR, AMIROOS_VERSION_PATCH, AMIROOS_RELEASE_TYPE, AOS_SYSTEM_SSSP_MAJOR, AOS_SYSTEM_SSSP_MINOR);
+  _printSystemInfoLine(stream, "AMiRo-LLD" ,SYSTEM_INFO_NAMEWIDTH, "%u.%u.%u %s (periphAL %u.%u)\n", AMIRO_LLD_VERSION_MAJOR, AMIRO_LLD_VERSION_MINOR, AMIRO_LLD_VERSION_PATCH, AMIRO_LLD_RELEASE_TYPE, PERIPHAL_VERSION_MAJOR, PERIPHAL_VERSION_MINOR);
+  _printSystemInfoLine(stream, "ChibiOS/RT" ,SYSTEM_INFO_NAMEWIDTH, "%u.%u.%u %s\n", CH_KERNEL_MAJOR, CH_KERNEL_MINOR, CH_KERNEL_PATCH, (CH_KERNEL_STABLE == 1) ? "stable" : "non-stable");
+  _printSystemInfoLine(stream, "ChibiOS/HAL",SYSTEM_INFO_NAMEWIDTH, "%u.%u.%u %s\n", CH_HAL_MAJOR, CH_HAL_MINOR, CH_HAL_PATCH, (CH_HAL_STABLE == 1) ? "stable" : "non-stable");
+  _printSystemInfoLine(stream, "build type",SYSTEM_INFO_NAMEWIDTH,"%s\n", (AMIROOS_CFG_DBG == true) ? "debug" : "release");
+  _printSystemInfoLine(stream, "Compiler" ,SYSTEM_INFO_NAMEWIDTH, "%s %u.%u.%u\n", "GCC", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__); // TODO: support other compilers than GCC
+  _printSystemInfoLine(stream, "Compiled" ,SYSTEM_INFO_NAMEWIDTH, "%s - %s\n", __DATE__, __TIME__);
   _printSystemInfoSeparator(stream, '-', SYSTEM_INFO_WIDTH);
   if (BL_CALLBACK_TABLE_ADDRESS->magicNumber == BL_MAGIC_NUMBER) {
-    _printSystemInfoLine(stream, "AMiRo-BLT", 14, "%u.%u.%u %s (SSSP %u.%u)\n", BL_CALLBACK_TABLE_ADDRESS->vBootloader.major, BL_CALLBACK_TABLE_ADDRESS->vBootloader.minor, BL_CALLBACK_TABLE_ADDRESS->vBootloader.patch,
+    _printSystemInfoLine(stream, "AMiRo-BLT", SYSTEM_INFO_NAMEWIDTH, "%u.%u.%u %s (SSSP %u.%u)\n", BL_CALLBACK_TABLE_ADDRESS->vBootloader.major, BL_CALLBACK_TABLE_ADDRESS->vBootloader.minor, BL_CALLBACK_TABLE_ADDRESS->vBootloader.patch,
                          (BL_CALLBACK_TABLE_ADDRESS->vBootloader.identifier == BL_VERSION_ID_AMiRoBLT_Release) ? "stable" :
                          (BL_CALLBACK_TABLE_ADDRESS->vBootloader.identifier == BL_VERSION_ID_AMiRoBLT_ReleaseCandidate) ? "release candidate" :
                          (BL_CALLBACK_TABLE_ADDRESS->vBootloader.identifier == BL_VERSION_ID_AMiRoBLT_Beta) ? "beta" :
@@ -269,9 +269,20 @@ static void _printSystemInfo(BaseSequentialStream *stream)
                          (BL_CALLBACK_TABLE_ADDRESS->vBootloader.identifier == BL_VERSION_ID_AMiRoBLT_PreAlpha) ? "pre-alpha" :
                          "<release type unknown>",
                          BL_CALLBACK_TABLE_ADDRESS->vSSSP.major, BL_CALLBACK_TABLE_ADDRESS->vSSSP.minor);
-    _printSystemInfoLine(stream, "Compiler", 14, "%s %u.%u.%u\n", (BL_CALLBACK_TABLE_ADDRESS->vCompiler.identifier == BL_VERSION_ID_GCC) ? "GCC" : "<compiler unknown>", BL_CALLBACK_TABLE_ADDRESS->vCompiler.major, BL_CALLBACK_TABLE_ADDRESS->vCompiler.minor, BL_CALLBACK_TABLE_ADDRESS->vCompiler.patch); // TODO: support other compilers than GCC
+    if (BL_CALLBACK_TABLE_ADDRESS->vSSSP.major != AOS_SYSTEM_SSSP_MAJOR) {
+      if (stream) {
+        chprintf(stream, "WARNING: Bootloader and AMiRo-OS implement incompatible SSSP versions!\n");
+      } else {
+        aosprintf("WARNING: Bootloader and AMiRo-OS implement incompatible SSSP versions!\n");
+      }
+    }
+    _printSystemInfoLine(stream, "Compiler", SYSTEM_INFO_NAMEWIDTH, "%s %u.%u.%u\n", (BL_CALLBACK_TABLE_ADDRESS->vCompiler.identifier == BL_VERSION_ID_GCC) ? "GCC" : "<compiler unknown>", BL_CALLBACK_TABLE_ADDRESS->vCompiler.major, BL_CALLBACK_TABLE_ADDRESS->vCompiler.minor, BL_CALLBACK_TABLE_ADDRESS->vCompiler.patch); // TODO: support other compilers than GCC
   } else {
-    chprintf(stream, "Bootloader incompatible or not available.\n");
+    if (stream) {
+      chprintf(stream, "Bootloader incompatible or not available.\n");
+    } else {
+      aosprintf("Bootloader incompatible or not available.\n");
+    }
   }
   _printSystemInfoSeparator(stream, '=', SYSTEM_INFO_WIDTH);
 
@@ -292,6 +303,8 @@ static void _printSystemInfo(BaseSequentialStream *stream)
  */
 static int _shellcmd_configcb(BaseSequentialStream* stream, int argc, char* argv[])
 {
+  aosDbgCheck(stream != NULL);
+
   // local variables
   int retval = AOS_INVALID_ARGUMENTS;
 
@@ -386,6 +399,8 @@ static int _shellcmd_configcb(BaseSequentialStream* stream, int argc, char* argv
  */
 static int _shellcmd_infocb(BaseSequentialStream* stream, int argc, char* argv[])
 {
+  aosDbgCheck(stream != NULL);
+
   (void)argc;
   (void)argv;
 
@@ -422,6 +437,8 @@ static int _shellcmd_infocb(BaseSequentialStream* stream, int argc, char* argv[]
  */
 static int _shellcmd_shutdowncb(BaseSequentialStream* stream, int argc, char* argv[])
 {
+  aosDbgCheck(stream != NULL);
+
   // print help text
   if (argc != 2 || strcmp(argv[1], "--help") == 0) {
     chprintf(stream, "Usage: %s OPTION\n", argv[0]);
@@ -446,22 +463,22 @@ static int _shellcmd_shutdowncb(BaseSequentialStream* stream, int argc, char* ar
   else {
     if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--hibernate") == 0) {
       chEvtBroadcastFlags(&aos.events.os.source, AOS_SYSTEM_EVENTFLAGS_HIBERNATE);
-      chThdExit(MSG_OK);
+      chThdTerminate(currp);
       return AOS_OK;
     }
     else if (strcmp(argv[1], "-d") == 0 || strcmp(argv[1], "--deepsleep") == 0) {
       chEvtBroadcastFlags(&aos.events.os.source, AOS_SYSTEM_EVENTFLAGS_DEEPSLEEP);
-      chThdExit(MSG_OK);
+      chThdTerminate(currp);
       return AOS_OK;
     }
     else if (strcmp(argv[1], "-t") == 0 || strcmp(argv[1], "--transportation") == 0) {
       chEvtBroadcastFlags(&aos.events.os.source, AOS_SYSTEM_EVENTFLAGS_TRANSPORTATION);
-      chThdExit(MSG_OK);
+      chThdTerminate(currp);
       return AOS_OK;
     }
     else if (strcmp(argv[1], "-r") == 0 || strcmp(argv[1], "--restart") == 0) {
       chEvtBroadcastFlags(&aos.events.os.source, AOS_SYSTEM_EVENTFLAGS_RESTART);
-      chThdExit(MSG_OK);
+      chThdTerminate(currp);
       return AOS_OK;
     }
     else {
@@ -484,6 +501,8 @@ static int _shellcmd_shutdowncb(BaseSequentialStream* stream, int argc, char* ar
  */
 static int _shellcmd_kerneltestcb(BaseSequentialStream* stream, int argc, char* argv[])
 {
+  aosDbgCheck(stream != NULL);
+
   (void)argc;
   (void)argv;
 
@@ -626,6 +645,7 @@ static void _sysSyncTimerCallback(void* par)
  * @param[in] evtFlagsPd    Event flags to be set when a PD interrupt occurs.
  * @param[in] evtFlagsSync  Event flags to be set when a Sync interrupt occurs.
  * @param[in] shellPrompt   String to be printed as prompt of the system shell.
+ * @param[in] stdio         Default (usually physically) interface for I/O like shell.
  */
 void aosSysInit(EXTDriver* extDrv,
                 EXTConfig* extCfg,
@@ -657,11 +677,11 @@ void aosSysInit(EXTDriver* extDrv,
 
   // set aos configuration
   aos.ssspStage = AOS_SSSP_STARTUP_2_1;
+  aosIOStreamInit(&aos.iostream);
   chEvtObjectInit(&aos.events.io.source);
   chEvtObjectInit(&aos.events.os.source);
   aos.events.io.flagsSignalPd = evtFlagsPd;
   aos.events.io.flagsSignalSync = evtFlagsSync;
-  ssmObjectInit(aos.ssm);
 
   // setup external interrupt system
   extCfg->channels[gpioPd->gpio->pad].cb = _signalPdCallback;
@@ -671,7 +691,7 @@ void aosSysInit(EXTDriver* extDrv,
 #if (AMIROOS_CFG_SHELL_ENABLE == true)
   // init shell
   aosShellInit(aos.shell,
-               (BaseSequentialStream*)aos.ssm,
+               &aos.events.os.source,
                shellPrompt,
                _shell_line,
                AMIROOS_CFG_SHELL_LINEWIDTH,
@@ -699,8 +719,8 @@ inline void aosSysStart(void)
   // update the system SSSP stage
   aos.ssspStage = AOS_SSSP_OPERATION;
 
-  // prin system information
-  _printSystemInfo(AOS_SYSTEM_STDIO);
+  // print system information;
+  _printSystemInfo((BaseSequentialStream*)&aos.iostream);
   aosprintf("\n");
 
 #if (AMIROOS_CFG_SHELL_ENABLE == true)
@@ -810,18 +830,23 @@ void aosSysShutdownInit(aos_shutdown_t shutdown)
 
   switch (shutdown) {
     case AOS_SHUTDOWN_PASSIVE:
+      chEvtBroadcastFlags(&aos.events.os.source, AOS_SYSTEM_EVENTFLAGS_SHUTDOWN);
       aosprintf("shutdown request received...\n");
       break;
     case AOS_SHUTDOWN_HIBERNATE:
+      chEvtBroadcastFlags(&aos.events.os.source, AOS_SYSTEM_EVENTFLAGS_HIBERNATE);
       aosprintf("shutdown to hibernate mode...\n");
       break;
     case AOS_SHUTDOWN_DEEPSLEEP:
+      chEvtBroadcastFlags(&aos.events.os.source, AOS_SYSTEM_EVENTFLAGS_DEEPSLEEP);
       aosprintf("shutdown to deepsleep mode...\n");
       break;
     case AOS_SHUTDOWN_TRANSPORTATION:
+      chEvtBroadcastFlags(&aos.events.os.source, AOS_SYSTEM_EVENTFLAGS_TRANSPORTATION);
       aosprintf("shutdown to transportation mode...\n");
       break;
     case AOS_SHUTDOWN_RESTART:
+      chEvtBroadcastFlags(&aos.events.os.source, AOS_SYSTEM_EVENTFLAGS_RESTART);
       aosprintf("restarting system...\n");
       break;
    // must never occur
@@ -842,7 +867,7 @@ void aosSysShutdownInit(aos_shutdown_t shutdown)
 void aosSysStop(void)
 {
 #if (AMIROOS_CFG_SHELL_ENABLE == true)
-  chThdTerminate(aos.shell->thread);
+  chThdWait(aos.shell->thread);
 #endif
 
   return;
@@ -853,8 +878,6 @@ void aosSysStop(void)
  */
 void aosSysDeinit(void)
 {
-  aos.ssm->input = NULL;
-
   return;
 }
 
