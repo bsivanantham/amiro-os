@@ -18,11 +18,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <aos_unittest.h>
 
+#if (AMIROOS_CFG_TESTS_ENABLE == true) || defined(__DOXYGEN__)
 #include <aos_debug.h>
 #include <chprintf.h>
 #include <string.h>
-
-#if (AMIROOS_CFG_TESTS_ENABLE == true) || defined(__DOXYGEN__)
 
 /**
  * @brief   Retrieve the total number of tests (passed and failed).

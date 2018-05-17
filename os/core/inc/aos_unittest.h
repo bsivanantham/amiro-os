@@ -20,10 +20,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define _AMIROOS_UNITTEST_H_
 
 #include <aosconf.h>
+#if (AMIROOS_CFG_TESTS_ENABLE == true) || defined(__DOXYGEN__)
+
 #include <hal.h>
 #include <aos_shell.h>
-
-#if (AMIROOS_CFG_TESTS_ENABLE == true) || defined(__DOXYGEN__)
 
 /*
  * Forward declarations.
