@@ -31,9 +31,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define AOS_IOCHANNEL_ATTACHED                  (1 << 0)
 
 /**
+ * @brief   Channel flag to indicate whether the channel is set as input.
+ */
+#define AOS_IOCHANNEL_INPUT_ENABLE              (1 << 1)
+
+/**
  * @brief   Channel flag to indicate whether the channel is set as output.
  */
-#define AOS_IOCHANNEL_OUTPUT_ENABLE             (1 << 1)
+#define AOS_IOCHANNEL_OUTPUT_ENABLE             (1 << 2)
 
 /*
  * forward definitions
@@ -120,6 +125,8 @@ extern "C" {
   void aosIOChannelInit(AosIOChannel* channel, BaseAsynchronousChannel* asyncchannel);
   void aosIOStreamAddChannel(AosIOStream* stream, AosIOChannel* channel);
   aos_status_t aosIOStreamRemoveChannel(AosIOStream* stream, AosIOChannel* channel);
+  void aosIOChannelInputEnable(AosIOChannel* channel);
+  void aosIOChannelInputDisable(AosIOChannel* channel);
   void aosIOChannelOutputEnable(AosIOChannel* channel);
   void aosIOChannelOutputDisable(AosIOChannel* channel);
 #ifdef __cplusplus

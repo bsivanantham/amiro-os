@@ -44,7 +44,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 static size_t _channelwrite(void *instance, const uint8_t *bp, size_t n)
 {
   if (((AosShellChannel*)instance)->flags & AOS_SHELLCHANNEL_OUTPUT_ENABLED) {
-    return streamWrite(((AosShellChannel*)instance)->iochannel->asyncchannel, bp, n);
+    return streamWrite(((AosShellChannel*)instance)->asyncchannel, bp, n);
   } else {
     return 0;
   }
@@ -55,7 +55,11 @@ static size_t _channelwrite(void *instance, const uint8_t *bp, size_t n)
  */
 static size_t _channelread(void *instance, uint8_t *bp, size_t n)
 {
-  return streamRead(((AosShellChannel*)instance)->iochannel->asyncchannel, bp, n);
+  if (((AosShellChannel*)instance)->flags & AOS_SHELLCHANNEL_INPUT_ENABLED) {
+    return streamRead(((AosShellChannel*)instance)->asyncchannel, bp, n);
+  } else {
+    return 0;
+  }
 }
 
 /**
@@ -64,7 +68,7 @@ static size_t _channelread(void *instance, uint8_t *bp, size_t n)
 static msg_t _channelput(void *instance, uint8_t b)
 {
   if (((AosShellChannel*)instance)->flags & AOS_SHELLCHANNEL_OUTPUT_ENABLED) {
-    return streamPut(((AosShellChannel*)instance)->iochannel->asyncchannel, b);
+    return streamPut(((AosShellChannel*)instance)->asyncchannel, b);
   } else {
     return MSG_RESET;
   }
@@ -75,7 +79,11 @@ static msg_t _channelput(void *instance, uint8_t b)
  */
 static msg_t _channelget(void *instance)
 {
-  return streamGet(((AosShellChannel*)instance)->iochannel->asyncchannel);
+  if (((AosShellChannel*)instance)->flags & AOS_SHELLCHANNEL_INPUT_ENABLED) {
+    return streamGet(((AosShellChannel*)instance)->asyncchannel);
+  } else {
+    return MSG_RESET;
+  }
 }
 
 /**
@@ -84,7 +92,7 @@ static msg_t _channelget(void *instance)
 static msg_t _channelputt(void *instance, uint8_t b, systime_t time)
 {
   if (((AosShellChannel*)instance)->flags & AOS_SHELLCHANNEL_OUTPUT_ENABLED) {
-    return chnPutTimeout(((AosShellChannel*)instance)->iochannel->asyncchannel, b, time);
+    return chnPutTimeout(((AosShellChannel*)instance)->asyncchannel, b, time);
   } else {
     return MSG_RESET;
   }
@@ -95,7 +103,11 @@ static msg_t _channelputt(void *instance, uint8_t b, systime_t time)
  */
 static msg_t _channelgett(void *instance, systime_t time)
 {
-  return chnGetTimeout(((AosShellChannel*)instance)->iochannel->asyncchannel, time);
+  if (((AosShellChannel*)instance)->flags & AOS_SHELLCHANNEL_INPUT_ENABLED) {
+    return chnGetTimeout(((AosShellChannel*)instance)->asyncchannel, time);
+  } else {
+    return MSG_RESET;
+  }
 }
 
 /**
@@ -104,7 +116,7 @@ static msg_t _channelgett(void *instance, systime_t time)
 static size_t _channelwritet(void *instance, const uint8_t *bp, size_t n, systime_t time)
 {
   if (((AosShellChannel*)instance)->flags & AOS_SHELLCHANNEL_OUTPUT_ENABLED) {
-    return chnWriteTimeout(((AosShellChannel*)instance)->iochannel->asyncchannel, bp, n, time);
+    return chnWriteTimeout(((AosShellChannel*)instance)->asyncchannel, bp, n, time);
   } else {
     return 0;
   }
@@ -115,7 +127,11 @@ static size_t _channelwritet(void *instance, const uint8_t *bp, size_t n, systim
  */
 static size_t _channelreadt(void *instance, uint8_t *bp, size_t n, systime_t time)
 {
-  return chnReadTimeout(((AosShellChannel*)instance)->iochannel->asyncchannel, bp, n, time);
+  if (((AosShellChannel*)instance)->flags & AOS_SHELLCHANNEL_INPUT_ENABLED) {
+    return chnReadTimeout(((AosShellChannel*)instance)->asyncchannel, bp, n, time);
+  } else {
+    return 0;
+  }
 }
 
 static const struct AosShellChannelVMT _channelvmt = {
@@ -163,18 +179,16 @@ static msg_t _streamput(void *instance, uint8_t b)
 
   // local variables
   AosShellChannel* channel = ((AosShellStream*)instance)->channel;
-  msg_t ret;
+  msg_t ret = MSG_OK;
 
   // iterate through the list of channels
   while (channel != NULL) {
-    ret = streamPut(channel, b);
-    if (ret != MSG_OK) {
-      return ret;
-    }
+    msg_t ret_ = streamPut(channel, b);
+    ret = (ret_ < ret) ? ret_ : ret;
     channel = channel->next;
   }
 
-  return MSG_OK;
+  return ret;
 }
 
 static msg_t _streamget(void *instance)
@@ -535,13 +549,14 @@ static aos_status_t _readChannel(aos_shell_t* shell, AosShellChannel* channel, s
   // local variables
   aos_shellaction_t action = AOS_SHELL_ACTION_NONE;
   char c;
+  special_key_t key;
 
   // initialize output variables
   *n = 0;
 
   // read character by character from the channel
   while (chnReadTimeout(channel, (uint8_t*)&c, 1, TIME_IMMEDIATE)) {
-    special_key_t key = KEY_UNKNOWN;
+    key = KEY_UNKNOWN;
 
     // parse escape sequence
     if (shell->inputdata.escp > 0) {
@@ -1094,16 +1109,17 @@ void aosShellStreamInit(AosShellStream* stream)
 /**
  * @brief   Initialize an AosShellChannel object with the specified parameters.
  *
- * @param[in] channel     The AosShellChannel to initialize.
- * @param[in] iochannel   An AosIOChannel this AosShellChannel is associated with.
+ * @param[in] channel       The AosShellChannel to initialize.
+ * @param[in] asyncchannel  An BaseAsynchronousChannel this AosShellChannel is associated with.
  */
-void aosShellChannelInit(AosShellChannel* channel, AosIOChannel* iochannel)
+void aosShellChannelInit(AosShellChannel* channel, BaseAsynchronousChannel* asyncchannel)
 {
   aosDbgCheck(channel != NULL);
-  aosDbgCheck(iochannel != NULL && iochannel->asyncchannel != NULL);
+  aosDbgCheck(asyncchannel != NULL);
 
   channel->vmt = &_channelvmt;
-  channel->iochannel = iochannel;
+  channel->asyncchannel = asyncchannel;
+  channel->listener.wflags = 0;
   channel->next = NULL;
   channel->flags = 0;
 
@@ -1225,7 +1241,7 @@ aos_status_t aosShellRemoveCommand(aos_shell_t *shell, char *cmd, aos_shellcomma
 void aosShellStreamAddChannel(AosShellStream* stream, AosShellChannel* channel)
 {
   aosDbgCheck(stream != NULL);
-  aosDbgCheck(channel != NULL && channel->iochannel != NULL && channel->iochannel->asyncchannel != NULL && channel->next == NULL && (channel->flags & AOS_SHELLCHANNEL_ATTACHED) == 0);
+  aosDbgCheck(channel != NULL && channel->asyncchannel != NULL && channel->next == NULL && (channel->flags & AOS_SHELLCHANNEL_ATTACHED) == 0);
 
   // prepend the new channel
   chSysLock();
@@ -1247,7 +1263,7 @@ void aosShellStreamAddChannel(AosShellStream* stream, AosShellChannel* channel)
 aos_status_t aosShellStreamRemoveChannel(AosShellStream* stream, AosShellChannel* channel)
 {
   aosDbgCheck(stream != NULL);
-  aosDbgCheck(channel != NULL && channel->iochannel != NULL && channel->iochannel->asyncchannel != NULL && channel->flags & AOS_SHELLCHANNEL_ATTACHED);
+  aosDbgCheck(channel != NULL && channel->asyncchannel != NULL && channel->flags & AOS_SHELLCHANNEL_ATTACHED);
 
   // local varibales
   AosShellChannel* prev = NULL;
@@ -1282,7 +1298,7 @@ aos_status_t aosShellStreamRemoveChannel(AosShellStream* stream, AosShellChannel
  */
 void aosShellChannelInputEnable(AosShellChannel* channel)
 {
-  aosDbgCheck(channel != NULL && channel->iochannel != NULL && channel->iochannel->asyncchannel != NULL);
+  aosDbgCheck(channel != NULL && channel->asyncchannel != NULL);
 
   chSysLock();
   channel->listener.wflags |= CHN_INPUT_AVAILABLE;
@@ -1299,7 +1315,7 @@ void aosShellChannelInputEnable(AosShellChannel* channel)
  */
 void aosShellChannelInputDisable( AosShellChannel* channel)
 {
-  aosDbgCheck(channel != NULL && channel->iochannel != NULL && channel->iochannel->asyncchannel != NULL);
+  aosDbgCheck(channel != NULL && channel->asyncchannel != NULL);
 
   chSysLock();
   channel->listener.wflags &= ~CHN_INPUT_AVAILABLE;
@@ -1316,7 +1332,7 @@ void aosShellChannelInputDisable( AosShellChannel* channel)
  */
 void aosShellChannelOutputEnable(AosShellChannel* channel)
 {
-  aosDbgCheck(channel != NULL && channel->iochannel != NULL && channel->iochannel->asyncchannel != NULL);
+  aosDbgCheck(channel != NULL && channel->asyncchannel != NULL);
 
   channel->flags |= AOS_SHELLCHANNEL_OUTPUT_ENABLED;
 
@@ -1330,7 +1346,7 @@ void aosShellChannelOutputEnable(AosShellChannel* channel)
  */
 void aosShellChannelOutputDisable(AosShellChannel* channel)
 {
-  aosDbgCheck(channel != NULL && channel->iochannel != NULL && channel->iochannel->asyncchannel != NULL);
+  aosDbgCheck(channel != NULL && channel->asyncchannel != NULL);
 
   channel->flags &= ~AOS_SHELLCHANNEL_OUTPUT_ENABLED;
 
@@ -1361,7 +1377,7 @@ THD_FUNCTION(aosShellThread, shell)
   chEvtRegisterMask(((aos_shell_t*)shell)->os.eventSource, &(((aos_shell_t*)shell)->os.eventListener), AOS_SHELL_EVENTMASK_OS);
   // register events to all input channels
   for (channel = ((aos_shell_t*)shell)->stream.channel; channel != NULL; channel = channel->next) {
-    chEvtRegisterMaskWithFlags(&(channel->iochannel->asyncchannel->event), &(channel->listener), AOS_SHELL_EVENTMASK_INPUT, channel->listener.wflags);
+    chEvtRegisterMaskWithFlags(&(channel->asyncchannel->event), &(channel->listener), AOS_SHELL_EVENTMASK_INPUT, channel->listener.wflags);
   }
 
   // fire start event
@@ -1401,54 +1417,43 @@ THD_FUNCTION(aosShellThread, shell)
           eventflags = chEvtGetAndClearFlags(&channel->listener);
           // if there is new input
           if (eventflags & CHN_INPUT_AVAILABLE) {
-            // if the channel is configured as input
-            if (channel->flags & AOS_SHELLCHANNEL_INPUT_ENABLED) {
-              // read input from channel
-              readeval = _readChannel((aos_shell_t*)shell, channel, &nchars);
-              // parse input line to argument list only if the input shall be executed
-              nargs = (readeval == AOS_SUCCESS && nchars > 0) ? _parseArguments((aos_shell_t*)shell) : 0;
-              // check number of arguments
-              if (nargs > ((aos_shell_t*)shell)->arglistsize) {
-                // error too many arguments
-                chprintf((BaseSequentialStream*)&((aos_shell_t*)shell)->stream, "\ttoo many arguments\n");
-              } else if (nargs > 0) {
-                // search command list for arg[0] and execute callback
-                cmd = ((aos_shell_t*)shell)->commands;
-                while (cmd != NULL) {
-                  if (strcmp(((aos_shell_t*)shell)->arglist[0], cmd->name) == 0) {
-                    ((aos_shell_t*)shell)->execstatus.command = cmd;
-                    chEvtBroadcastFlags(&(((aos_shell_t*)shell)->eventSource), AOS_SHELL_EVTFLAG_EXEC);
-                    ((aos_shell_t*)shell)->execstatus.retval = cmd->callback((BaseSequentialStream*)&((aos_shell_t*)shell)->stream, nargs, ((aos_shell_t*)shell)->arglist);
-                    chEvtBroadcastFlags(&(((aos_shell_t*)shell)->eventSource), AOS_SHELL_EVTFLAG_DONE);
-                    // notify if the command was not successful
-                    if (((aos_shell_t*)shell)->execstatus.retval != 0) {
-                      chprintf((BaseSequentialStream*)&((aos_shell_t*)shell)->stream, "command returned exit status %d\n", ((aos_shell_t*)shell)->execstatus.retval);
-                    }
-                    break;
+            // read input from channel
+            readeval = _readChannel((aos_shell_t*)shell, channel, &nchars);
+            // parse input line to argument list only if the input shall be executed
+            nargs = (readeval == AOS_SUCCESS && nchars > 0) ? _parseArguments((aos_shell_t*)shell) : 0;
+            // check number of arguments
+            if (nargs > ((aos_shell_t*)shell)->arglistsize) {
+              // error too many arguments
+              chprintf((BaseSequentialStream*)&((aos_shell_t*)shell)->stream, "\ttoo many arguments\n");
+            } else if (nargs > 0) {
+              // search command list for arg[0] and execute callback
+              cmd = ((aos_shell_t*)shell)->commands;
+              while (cmd != NULL) {
+                if (strcmp(((aos_shell_t*)shell)->arglist[0], cmd->name) == 0) {
+                  ((aos_shell_t*)shell)->execstatus.command = cmd;
+                  chEvtBroadcastFlags(&(((aos_shell_t*)shell)->eventSource), AOS_SHELL_EVTFLAG_EXEC);
+                  ((aos_shell_t*)shell)->execstatus.retval = cmd->callback((BaseSequentialStream*)&((aos_shell_t*)shell)->stream, nargs, ((aos_shell_t*)shell)->arglist);
+                  chEvtBroadcastFlags(&(((aos_shell_t*)shell)->eventSource), AOS_SHELL_EVTFLAG_DONE);
+                  // notify if the command was not successful
+                  if (((aos_shell_t*)shell)->execstatus.retval != 0) {
+                    chprintf((BaseSequentialStream*)&((aos_shell_t*)shell)->stream, "command returned exit status %d\n", ((aos_shell_t*)shell)->execstatus.retval);
                   }
-                  cmd = cmd->next;
-                } /* end of while */
-
-                // if no matching command was found, print an error
-                if (cmd == NULL) {
-                  chprintf((BaseSequentialStream*)&((aos_shell_t*)shell)->stream, "%s: command not found\n", ((aos_shell_t*)shell)->arglist[0]);
+                  break;
                 }
-              }
+                cmd = cmd->next;
+              } /* end of while */
 
-              // rreset some internal variables and eprint a new prompt
-              if (readeval == AOS_SUCCESS && !chThdShouldTerminateX()) {
-                ((aos_shell_t*)shell)->inputdata.cursorpos = 0;
-                ((aos_shell_t*)shell)->inputdata.lineend = 0;
-                _printPrompt((aos_shell_t*)shell);
+              // if no matching command was found, print an error
+              if (cmd == NULL) {
+                chprintf((BaseSequentialStream*)&((aos_shell_t*)shell)->stream, "%s: command not found\n", ((aos_shell_t*)shell)->arglist[0]);
               }
             }
-            // if the channel is not configured as input
-            else {
-              // read but drop all data
-              uint8_t c;
-              while (chnReadTimeout(channel, &c, 1, TIME_IMMEDIATE)) {
-                continue;
-              }
+
+            // reset some internal variables and eprint a new prompt
+            if (readeval == AOS_SUCCESS && !chThdShouldTerminateX()) {
+              ((aos_shell_t*)shell)->inputdata.cursorpos = 0;
+              ((aos_shell_t*)shell)->inputdata.lineend = 0;
+              _printPrompt((aos_shell_t*)shell);
             }
           }
 

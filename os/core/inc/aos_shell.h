@@ -24,7 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <hal.h>
 #include <aos_types.h>
-#include <aos_iostream.h>
+//#include <aos_iostream.h>
 
 /**
  * @brief   Shell event flag that is emitted when the thread starts.
@@ -102,8 +102,8 @@ typedef struct aos_shellstream AosShellStream;
  * @brief   AosShellChannel specific data.
  */
 #define _aos_shell_channel_data                                             \
-  /* pointer to a AosIOChannel object */                                    \
-  AosIOChannel* iochannel;                                                  \
+  /* pointer to a BaseAsynchronousChannel object */                         \
+  BaseAsynchronousChannel* asyncchannel;                                    \
   /* event listener for the associated BaseAsynchronousChannel */           \
   event_listener_t listener;                                                \
   /* pointer to the next chennal in a AosShellStream */                     \
@@ -211,6 +211,7 @@ typedef struct aos_shellexecstatus {
  * @brief   Enumerator to encode shell actions.
  */
 typedef enum aos_shellaction {
+  AOS_SHELL_ACTION_NONE,
   AOS_SHELL_ACTION_READCHAR,
   AOS_SHELL_ACTION_AUTOFILL,
   AOS_SHELL_ACTION_SUGGEST,
@@ -225,7 +226,6 @@ typedef enum aos_shellaction {
   AOS_SHELL_ACTION_CURSORRIGHT,
   AOS_SHELL_ACTION_EXECUTE,
   AOS_SHELL_ACTION_ESCSTART,
-  AOS_SHELL_ACTION_NONE,
 } aos_shellaction_t;
 
 /**
@@ -344,7 +344,7 @@ extern "C" {
 #endif
   void aosShellInit(aos_shell_t* shell, event_source_t* oseventsource, const char* prompt, char* line, size_t linesize, char** arglist, size_t arglistsize);
   void aosShellStreamInit(AosShellStream* stream);
-  void aosShellChannelInit(AosShellChannel* channel, AosIOChannel* iochannel);
+  void aosShellChannelInit(AosShellChannel* channel, BaseAsynchronousChannel* asyncchannel);
   aos_status_t aosShellAddCommand(aos_shell_t* shell, aos_shellcommand_t* cmd);
   aos_status_t aosShellRemoveCommand(aos_shell_t* shell, char* cmd, aos_shellcommand_t** removed);
   void aosShellStreamAddChannel(AosShellStream* stream, AosShellChannel* channel);

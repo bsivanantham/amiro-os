@@ -177,7 +177,7 @@ int main(void)
   aosIOChannelOutputEnable(&_stdiochannel);
   aosIOStreamAddChannel(&aos.iostream, &_stdiochannel);
 #if (AMIROOS_CFG_SHELL_ENABLE == true)
-  aosShellChannelInit(&_stdshellchannel, &_stdiochannel);
+  aosShellChannelInit(&_stdshellchannel, (BaseAsynchronousChannel*)&MODULE_HAL_PROGIF);
   aosShellChannelInputEnable(&_stdshellchannel);
   aosShellChannelOutputEnable(&_stdshellchannel);
   aosShellStreamAddChannel(&aos.shell->stream, &_stdshellchannel);

@@ -40,7 +40,11 @@ static size_t _channelwrite(void *instance, const uint8_t *bp, size_t n)
  */
 static size_t _channelread(void *instance, uint8_t *bp, size_t n)
 {
-  return streamRead(((AosIOChannel*)instance)->asyncchannel, bp, n);
+  if (((AosIOChannel*)instance)->flags & AOS_IOCHANNEL_INPUT_ENABLE) {
+    return streamRead(((AosIOChannel*)instance)->asyncchannel, bp, n);
+  } else {
+    return 0;
+  }
 }
 
 /**
@@ -60,7 +64,11 @@ static msg_t _channelput(void *instance, uint8_t b)
  */
 static msg_t _channelget(void *instance)
 {
-  return streamGet(((AosIOChannel*)instance)->asyncchannel);
+  if (((AosIOChannel*)instance)->flags & AOS_IOCHANNEL_INPUT_ENABLE) {
+    return streamGet(((AosIOChannel*)instance)->asyncchannel);
+  } else {
+    return MSG_RESET;
+  }
 }
 
 /**
@@ -80,7 +88,11 @@ static msg_t _channelputt(void *instance, uint8_t b, systime_t time)
  */
 static msg_t _channelgett(void *instance, systime_t time)
 {
-  return chnGetTimeout(((AosIOChannel*)instance)->asyncchannel, time);
+  if (((AosIOChannel*)instance)->flags & AOS_IOCHANNEL_INPUT_ENABLE) {
+    return chnGetTimeout(((AosIOChannel*)instance)->asyncchannel, time);
+  } else {
+    return MSG_RESET;
+  }
 }
 
 /**
@@ -100,7 +112,11 @@ static size_t _channelwritet(void *instance, const uint8_t *bp, size_t n, systim
  */
 static size_t _channelreadt(void *instance, uint8_t *bp, size_t n, systime_t time)
 {
-  return chnReadTimeout(((AosIOChannel*)instance)->asyncchannel, bp, n, time);
+  if (((AosIOChannel*)instance)->flags & AOS_IOCHANNEL_INPUT_ENABLE) {
+    return chnReadTimeout(((AosIOChannel*)instance)->asyncchannel, bp, n, time);
+  } else {
+    return 0;
+  }
 }
 
 /**
@@ -160,18 +176,16 @@ static msg_t _streamput(void *instance, uint8_t b)
 
   // local variables
   AosIOChannel* channel = ((AosIOStream*)instance)->channel;
-  msg_t ret;
+  msg_t ret = MSG_OK;
 
   // iterate through the list of channels
   while (channel != NULL) {
-    ret = streamPut(channel, b);
-    if (ret != MSG_OK) {
-      return ret;
-    }
+    msg_t ret_ = streamPut(channel, b);
+    ret = (ret_ < ret) ? ret_ : ret;
     channel = channel->next;
   }
 
-  return MSG_OK;
+  return ret;
 }
 
 /**
@@ -291,6 +305,34 @@ aos_status_t aosIOStreamRemoveChannel(AosIOStream* stream, AosIOChannel* channel
 
   // if the channel was not found, return an error
   return AOS_ERROR;
+}
+
+/**
+ * @brief   Enable input for a AosIOChannel.
+ *
+ * @param[in] channel   The AosIOChannel to enable as input.
+ */
+void aosIOChannelInputEnable(AosIOChannel* channel)
+{
+  aosDbgCheck(channel != NULL);
+
+  channel->flags |= AOS_IOCHANNEL_INPUT_ENABLE;
+
+  return;
+}
+
+/**
+ * @brief   Disable input for a AosIOChannel.
+ *
+ * @param[in] channel   The AosIOChannel to disable as input.
+ */
+void aosIOChannelInputDisable(AosIOChannel* channel)
+{
+  aosDbgCheck(channel != NULL);
+
+  channel->flags &= ~AOS_IOCHANNEL_INPUT_ENABLE;
+
+  return;
 }
 
 /**
