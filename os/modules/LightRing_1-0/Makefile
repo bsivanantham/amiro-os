@@ -71,7 +71,7 @@ endif
 # If enabled, this option makes the build process faster by not compiling
 # modules not used in the current configuration.
 ifeq ($(USE_SMART_BUILD),)
-  USE_SMART_BUILD = yes
+  USE_SMART_BUILD = no
 endif
 
 #                                                                              #
@@ -96,7 +96,7 @@ endif
 
 # Enables the use of FPU on Cortex-M4.
 # Possible selections are:
-#   no     - no FPU is used (propably equals 'soft')
+#   no     - no FPU is used (probably equals 'soft')
 #   soft   - does not use the FPU, thus all floating point operations are emulated
 #   softfp - uses the FPU, but uses the integer registers only
 #   hard   - uses the FPU and passes data via the FPU registers

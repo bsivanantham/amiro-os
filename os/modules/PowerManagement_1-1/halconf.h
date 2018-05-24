@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
  * @file    os/modules/PowerManagement/halconf.h
- * @brief   HAL configuration header for the PowerManagement module.
+ * @brief   HAL configuration header for the PowerManagement v1.1 module.
  * @details HAL configuration file, this file allows to enable or disable the
  *          various device drivers from your application. You may also use
  *          this file in order to override the device drivers default settings.

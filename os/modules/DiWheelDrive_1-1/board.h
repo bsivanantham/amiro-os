@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define _BOARD_H_
 
 /*
- * Setup for AMiRo DiWheelDrive board.
+ * Setup for AMiRo DiWheelDrive v1.1 board.
  */
 
 /*

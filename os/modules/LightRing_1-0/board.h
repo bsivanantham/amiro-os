@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define _BOARD_H_
 
 /*
- * Setup for AMiRo LightRing board.
+ * Setup for AMiRo LightRing v1.0 board.
  */
 
 /*
