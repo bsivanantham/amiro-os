@@ -46,10 +46,12 @@ static event_listener_t _eventListenerOS;
  */
 static AosIOChannel _stdiochannel;
 
+#if (AMIROOS_CFG_SHELL_ENABLE == true) || defined(__DOXYGEN__)
 /**
  * @brief   I/O shell channel for the programmer interface.
  */
 static AosShellChannel _stdshellchannel;
+#endif
 #endif
 
 /**
