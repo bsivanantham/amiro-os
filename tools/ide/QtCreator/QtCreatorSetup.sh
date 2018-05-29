@@ -363,7 +363,7 @@ function retrieveGccIncludeDir {
 
     # traverse any links
     while [ -L "$binpath" ]; do
-      binpath=$(readlink $binpath)
+      binpath=$(realpath $(dirname $binpath)/$(readlink $binpath))
     done
     printInfo "gcc-arm-none-eabi detected: $binpath\n"
 
