@@ -20,6 +20,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <ch.h>
 #include <amiroos.h>
 
+/*
+ * hook to add further includes
+ */
+#if defined(AMIROOS_CFG_MAIN_EXTRA_INCLUDE)
+AMIROOS_CFG_MAIN_EXTRA_INCLUDE
+#endif
+
 /**
  * @brief   Event mask to identify I/O events.
  */
@@ -54,6 +61,13 @@ static AosShellChannel _stdshellchannel;
 #endif
 #endif
 
+/*
+ * hook to add further static variables
+ */
+#if defined(AMIROOS_CFG_MAIN_EXTRA_STATIC_VARIABLES)
+AMIROOS_CFG_MAIN_EXTRA_STATIC_VARIABLES
+#endif
+
 /**
  * @brief   Prints an error message about an unexpected event.
  *
@@ -75,8 +89,8 @@ int main(void)
   eventmask_t eventmask = 0;
   eventflags_t eventflags = 0;
   aos_shutdown_t shutdown = AOS_SHUTDOWN_NONE;
-#if defined(AMIROOS_CFG_MAIN_EXTRA_VARIABLES)
-  AMIROOS_CFG_MAIN_EXTRA_VARIABLES
+#if defined(AMIROOS_CFG_MAIN_EXTRA_THREAD_VARIABLES)
+  AMIROOS_CFG_MAIN_EXTRA_THREAD_VARIABLES
 #endif
 
   /*
@@ -86,7 +100,11 @@ int main(void)
    */
 
 #if defined(AMIROOS_CFG_MAIN_INIT_HOOK_0)
+#if defined(AMIROOS_CFG_MAIN_INIT_HOOK_0_ARGS)
+  AMIROOS_CFG_MAIN_INIT_HOOK_0(AMIROOS_CFG_MAIN_INIT_HOOK_0_ARGS);
+#else
   AMIROOS_CFG_MAIN_INIT_HOOK_0();
+#endif
 #endif
 
   /* hardware, kernel, and operating system initialization */
