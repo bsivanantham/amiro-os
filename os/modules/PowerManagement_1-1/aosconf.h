@@ -129,6 +129,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #endif
 
 /**
+ * @brief   Shell thread priority.
+ */
+#if !defined(OS_CFG_SHELL_THREADPRIO)
+  #define AMIROOS_CFG_SHELL_THREADPRIO          THD_NORMALPRIO_MIN
+#else
+  #define AMIROOS_CFG_SHELL_THREADPRIO          OS_CFG_SHELL_THREADPRIO
+#endif
+
+/**
  * @brief   Shell maximum input line length.
  */
 #if !defined(OS_CFG_SHELL_LINEWIDTH)
