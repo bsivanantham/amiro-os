@@ -24,7 +24,7 @@
 
 
 # absolute path to this directory
-UNITTESTS_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+UNITTESTS_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
 # include path
 UNITTESTSINC = $(UNITTESTS_DIR)lld/inc \

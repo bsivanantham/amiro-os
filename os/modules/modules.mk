@@ -24,10 +24,10 @@
 
 
 # absolute path to this directory
-MODULES_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+MODULES_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
 # list of available modules
-MODULES = $(patsubst $(MODULES_DIR)/%/,%,$(sort $(dir $(wildcard $(MODULES_DIR)/*/*))))
+MODULES = $(patsubst $(MODULES_DIR)%/,%,$(sort $(dir $(wildcard $(MODULES_DIR)*/*))))
 
 # include paths
 MODULESINC = $(MODULES_DIR)

@@ -24,10 +24,10 @@
 
 
 # absolute path to this directory
-AMIROOS_CORE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+AMIROOS_CORE_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
 # include paths
-AMIROOSCOREINC = $(AMIROOS_CORE_DIR)inc/
+AMIROOSCOREINC = $(AMIROOS_CORE_DIR)inc
 
 # C source files
 AMIROOSCORECSRC = $(AMIROOS_CORE_DIR)src/aos_debug.c \

@@ -85,7 +85,7 @@ EXAMPLES:
 endef
 export HELP_TEXT
 
-OS_BASE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+OS_BASE_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
 help:
 	@echo "$$HELP_TEXT"

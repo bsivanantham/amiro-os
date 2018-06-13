@@ -24,7 +24,7 @@
 
 
 # the path to this makefile
-BOOTLOADER_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+BOOTLOADER_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
 # the interface for the bootloader
 BOOTLOADERINC = $(BOOTLOADER_DIR)AMiRo-BLT/Target/Source/AMiRo

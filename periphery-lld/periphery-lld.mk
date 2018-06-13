@@ -24,13 +24,13 @@
 
 
 # absolute path to this directory
-PERIPHERYLLD_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+PERIPHERYLLD_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
 include $(PERIPHERYLLD_DIR)AMiRo-LLD/Makefile
 
 # include path
 PERIPHERYLLDINC = $(AMIROLLD_INC) \
-                  $(PERIPHERYLLD_DIR)
+                  $(PERIPHERYLLD_DIR:/=)
 
 # C sources
 PERIPHERYLLDCSRC = $(AMIROLLD_CSRC)

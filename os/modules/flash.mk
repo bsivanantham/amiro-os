@@ -24,7 +24,7 @@
 
 
 # the path to this makefile
-FLASH_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+FLASH_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
 include $(FLASH_DIR)../../bootloader/bootloader.mk
 

@@ -23,16 +23,18 @@
 
 
 
-all: modules
+include $(dir $(lastword $(MAKEFILE_LIST)))modules.mk
 
-include $(dir $(abspath $(lastword $(MAKEFILE_LIST))))modules.mk
+.PHONY: all $(MODULES) flash clean
+
+ifneq ($(BUILDDIR),)
+  export BUILDDIR
+endif
 
 CLEANTRGS = $(MODULES:%=clean_%)
 FLASHTRGS = $(MODULES:%=flash_%)
 
-.PHONY: $(MODULES)
-
-modules: $(MODULES)
+all: $(MODULES)
 $(MODULES):
 	$(MAKE) -C $(MODULES_DIR)$@
 

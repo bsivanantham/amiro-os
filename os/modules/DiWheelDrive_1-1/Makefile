@@ -35,12 +35,12 @@ endif
 
 # C specific options here (added to USE_OPT).
 ifeq ($(USE_COPT),)
-  USE_COPT = -std=c99
+  USE_COPT = -std=c11
 endif
 
 # C++ specific options here (added to USE_OPT).
 ifeq ($(USE_CPPOPT),)
-  USE_CPPOPT = -fno-rtti -std=c++14
+  USE_CPPOPT = -fno-rtti -std=c++17
 endif
 
 # Enable this if you want the linker to remove unused code and data
@@ -289,6 +289,11 @@ ULIBS +=
 #                                                                              #
 # End of user defines                                                          #
 ################################################################################
+
+# allow for custom build directory
+ifneq ($(BUILDDIR),)
+  BUILDDIR := $(BUILDDIR)/$(PROJECT)
+endif
 
 RULESPATH = $(CHIBIOS)/os/common/startup/ARMCMx/compilers/GCC
 include $(RULESPATH)/rules.mk

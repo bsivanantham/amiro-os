@@ -24,7 +24,7 @@
 
 
 # absolute path to this directory
-HAL_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+HAL_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
 # add include path
 HALINC += $(HAL_DIR)include

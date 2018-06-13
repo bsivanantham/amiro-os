@@ -24,7 +24,7 @@
 
 
 # absolute path to this directory
-BOARD_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+BOARD_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
 # include paths
 BOARDINC = $(BOARD_DIR)
