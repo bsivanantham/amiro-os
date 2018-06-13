@@ -36,6 +36,8 @@ AMIROOSCORECSRC = $(AMIROOS_CORE_DIR)src/aos_debug.c \
                   $(AMIROOS_CORE_DIR)src/aos_system.c \
                   $(AMIROOS_CORE_DIR)src/aos_thread.c \
                   $(AMIROOS_CORE_DIR)src/aos_timer.c \
-                  $(AMIROOS_CORE_DIR)src/aos_unittest.c\
-                  $(AMIROOS_CORE_DIR)src/main.c
+                  $(AMIROOS_CORE_DIR)src/aos_unittest.c
+
+# C++ source files
+AMIROOSCORECPPSRC = $(AMIROOS_CORE_DIR)src/aos_main.cpp
 
