@@ -89,7 +89,7 @@ endef
 OS_BASE_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
 help:
-	@echo "$$HELP_TEXT"
+	$(info $(HELP_TEXT))
 	@exit
 
-include $(OS_BASE_DIR)/os/modules/Makefile
+include $(OS_BASE_DIR)/modules/Makefile
