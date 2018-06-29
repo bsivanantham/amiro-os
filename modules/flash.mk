@@ -26,7 +26,7 @@
 # the path to this makefile
 FLASH_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
-include $(FLASH_DIR)../../bootloader/bootloader.mk
+include $(FLASH_DIR)../bootloader/bootloader.mk
 
 # the files to flash
 ifdef PROJECT

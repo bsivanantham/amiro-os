@@ -116,9 +116,9 @@ endif
 PROJECT := $(patsubst $(abspath $(dir $(abspath $(lastword $(MAKEFILE_LIST))))..)/%,%,$(abspath $(dir $(abspath $(lastword $(MAKEFILE_LIST))))))
 
 # Imported source files and paths
-include ../../../kernel/kernel.mk
+include ../../kernel/kernel.mk
 CHIBIOS := $(AMIROOS_KERNEL)
-AMIROOS = ../..
+AMIROOS = ../../os
 # Startup files
 include $(CHIBIOS)/os/common/startup/ARMCMx/compilers/GCC/mk/startup_stm32f4xx.mk
 # HAL-OSAL files
@@ -134,11 +134,11 @@ include $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC/mk/port_v7m.mk
 # Other files (optional).
 include $(CHIBIOS)/test/rt/test.mk
 # AMiRo-BLT files
-include ../../../bootloader/bootloader.mk
+include ../../bootloader/bootloader.mk
 # AMiRo-LLD files
-include ../../../periphery-lld/periphery-lld.mk
+include ../../periphery-lld/periphery-lld.mk
 # AMiRo-OS files
-include $(AMIROOS)/modules/modules.mk
+include ../modules.mk
 include $(AMIROOS)/core/core.mk
 include $(AMIROOS)/unittests/unittests.mk
 
@@ -300,4 +300,4 @@ endif
 RULESPATH = $(CHIBIOS)/os/common/startup/ARMCMx/compilers/GCC
 include $(RULESPATH)/rules.mk
 
-include $(AMIROOS)/modules/flash.mk
+include ../flash.mk

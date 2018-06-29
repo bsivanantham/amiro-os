@@ -33,5 +33,5 @@ MODULES = $(patsubst $(MODULES_DIR)%/,%,$(sort $(dir $(wildcard $(MODULES_DIR)*/
 MODULESINC = $(MODULES_DIR)
 
 # C source files
-MODULESCSRC = $(MODULES_DIR)
+MODULESCSRC =
 
