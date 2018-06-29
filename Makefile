@@ -83,7 +83,8 @@ EXAMPLES:
 
 ################################################################################
 endef
-export HELP_TEXT
+
+.PHONY: help
 
 OS_BASE_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 

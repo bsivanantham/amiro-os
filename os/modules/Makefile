@@ -25,14 +25,14 @@
 
 include $(dir $(lastword $(MAKEFILE_LIST)))modules.mk
 
-.PHONY: all $(MODULES) flash clean
-
 ifneq ($(BUILDDIR),)
   export BUILDDIR
 endif
 
 CLEANTRGS = $(MODULES:%=clean_%)
 FLASHTRGS = $(MODULES:%=flash_%)
+
+.PHONY: all $(MODULES) flash $(FLASHTRGS) clean $(CLEANTRGS)
 
 all: $(MODULES)
 $(MODULES):
