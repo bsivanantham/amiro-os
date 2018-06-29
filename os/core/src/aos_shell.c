@@ -22,11 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <aos_debug.h>
 #include <aos_time.h>
 #include <aos_system.h>
-#include <chprintf.h>
 #include <string.h>
-#include <aos_thread.h>
-
-
 
 /**
  * @brief   Event mask to be set on OS related events.

@@ -18,11 +18,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <aos_system.h>
 
-#include <chprintf.h>
 #include <amiroos.h>
 #include <amiroblt.h>
 #include <string.h>
-#include <stdarg.h>
 #if (AMIROOS_CFG_TESTS_ENABLE == true)
 #include <ch_test.h>
 #endif

@@ -33,6 +33,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   #error "AMIROOS_CFG_SSSP_SYSSYNCPERIOD not defined in aosconf.h"
 #endif
 
+#ifndef AMIROOS_CFG_DBG
+  #error "AMIROOS_CFG_DBG not defined in aosconf.h"
+#endif
+
 #ifndef AMIROOS_CFG_TESTS_ENABLE
   #error "AMIROOS_CFG_TESTS_ENABLE not defined in aosconf.h"
 #endif
@@ -57,6 +61,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
   #ifndef AMIROOS_CFG_SHELL_STACKSIZE
     #error "AMIROOS_CFG_SHELL_STACKSIZE not defined in aosconf.h"
+  #endif
+
+  #ifndef AMIROOS_CFG_SHELL_THREADPRIO
+    #error "AMIROOS_CFG_SHELL_THREADPRIO not defined in aosconf.h"
   #endif
 
   #ifndef AMIROOS_CFG_SHELL_LINEWIDTH

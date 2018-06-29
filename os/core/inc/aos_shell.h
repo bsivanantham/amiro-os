@@ -21,10 +21,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <aosconf.h>
 #if (AMIROOS_CFG_SHELL_ENABLE == true)
-
 #include <hal.h>
 #include <aos_types.h>
-//#include <aos_iostream.h>
 
 /**
  * @brief   Shell event flag that is emitted when the thread starts.

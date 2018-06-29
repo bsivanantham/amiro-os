@@ -40,10 +40,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /*============================================================================*/
 
 #include <periphALtypes.h>
-
 #include <hal.h>
 #include <hal_qei.h>
-#include <ch.h>
 #include <aos_debug.h>
 
 /*============================================================================*/

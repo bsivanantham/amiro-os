@@ -56,7 +56,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 /* core headers */
 #include <aosconf.h>
-#include <module.h>
+#include <hal.h>
+#include <hal_qei.h>
+#include <ch.h>
 
 #if !defined(_AMIRO_OS_CFG_)
 #error "invalid AMiRo-OS configuration file"

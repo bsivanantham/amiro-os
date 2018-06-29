@@ -157,5 +157,5 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 /** @} */
 
-#endif // _AOSCONF_H_
+#endif /* _AOSCONF_H_ */
 
