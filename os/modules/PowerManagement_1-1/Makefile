@@ -173,28 +173,29 @@ CPPSRC = $(AMIROOSCORECPPSRC) \
 # C sources to be compiled in ARM mode regardless of the global setting.
 # NOTE: Mixing ARM and THUMB mode enables the -mthumb-interwork compiler
 #       option that results in lower performance and larger code size.
-ACSRC =
+ACSRC = $(APPSACSRC)
 
 # C++ sources to be compiled in ARM mode regardless of the global setting.
 # NOTE: Mixing ARM and THUMB mode enables the -mthumb-interwork compiler
 #       option that results in lower performance and larger code size.
-ACPPSRC =
+ACPPSRC = $(APPSACPPSRC)
 
 # C sources to be compiled in THUMB mode regardless of the global setting.
 # NOTE: Mixing ARM and THUMB mode enables the -mthumb-interwork compiler
 #       option that results in lower performance and larger code size.
-TCSRC =
+TCSRC = $(APPSTCSRC)
 
 # C sources to be compiled in THUMB mode regardless of the global setting.
 # NOTE: Mixing ARM and THUMB mode enables the -mthumb-interwork compiler
 #       option that results in lower performance and larger code size.
-TCPPSRC =
+TCPPSRC = $(APPSTCPPSRC)
 
 # List ASM source files here
-ASMSRC =
+ASMSRC = $(APPSASMSRC)
 ASMXSRC = $(STARTUPASM) \
           $(PORTASM) \
-          $(OSALASM)
+          $(OSALASM) \
+          $(APPSASMXSRC)
 
 INCDIR = $(CHIBIOS)/os/license \
          $(STARTUPINC) \
