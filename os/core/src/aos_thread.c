@@ -33,8 +33,8 @@ void aosThdSleepUntilS(const aos_timestamp_t* t)
   aosSysGetUptimeX(&uptime);
 
   // while the remaining time is too long, it must be split into multiple sleeps
-  while ( (*t > uptime) && ((*t - uptime) > THD_MAX_SLEEP_US) ) {
-    chThdSleepS(US2ST(THD_MAX_SLEEP_US));
+  while ( (*t > uptime) && ((*t - uptime) > AOS_THD_MAX_SLEEP_US) ) {
+    chThdSleepS(US2ST(AOS_THD_MAX_SLEEP_US));
     aosSysGetUptimeX(&uptime);
   }
 

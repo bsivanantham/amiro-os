@@ -25,22 +25,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /**
  * @brief   Maximum timer interval that can be set in system ticks.
  */
-#define TIMER_MAX_INTERVAL_ST         TIME_MAXIMUM
+#define AOS_TIMER_MAX_INTERVAL_ST     TIME_MAXIMUM
 
 /**
  * @brief   Maximum timer interval that can be set in seconds.
  */
-#define TIMER_MAX_INTERVAL_S          (ST2S(TIMER_MAX_INTERVAL_ST) - 1)
+#define AOS_TIMER_MAX_INTERVAL_S      (ST2S(AOS_TIMER_MAX_INTERVAL_ST) - 1)
 
 /**
  * @brief   Maximum timer interval that can be set in milliseconds.
  */
-#define TIMER_MAX_INTERVAL_MS         (ST2MS(TIMER_MAX_INTERVAL_ST) - 1)
+#define AOS_TIMER_MAX_INTERVAL_MS     (ST2MS(AOS_TIMER_MAX_INTERVAL_ST) - 1)
 
 /**
  * @brief   Maximum timer interval that can be set in microseconds.
  */
-#define TIMER_MAX_INTERVAL_US         (ST2US(TIMER_MAX_INTERVAL_ST) - 1)
+#define AOS_TIMER_MAX_INTERVAL_US     (ST2US(AOS_TIMER_MAX_INTERVAL_ST) - 1)
 
 /**
  * @brief   Timer stucture.

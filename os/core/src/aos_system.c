@@ -660,7 +660,7 @@ void aosSysInit(EXTDriver* extDrv,
   aosDbgCheck(gpioSync != NULL);
 
   // set control thread to maximum priority
-  chThdSetPriority(THD_CTRLPRIO);
+  chThdSetPriority(AOS_THD_CTRLPRIO);
 
   // set local variables
   _gpioPd = gpioPd;

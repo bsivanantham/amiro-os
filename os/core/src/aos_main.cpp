@@ -22,19 +22,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /*
  * hook to add further includes
  */
-#if defined(AMIROOS_CFG_MAIN_EXTRA_INCLUDE)
-AMIROOS_CFG_MAIN_EXTRA_INCLUDE
+#if defined(AMIROOS_CFG_MAIN_EXTRA_INCLUDE_HEADER)
+#include AMIROOS_CFG_MAIN_EXTRA_INCLUDE_HEADER
 #endif
 
 /**
  * @brief   Event mask to identify I/O events.
  */
-#define IOEVENT_MASK                            EVENT_MASK(0)
+#define _IOEVENT_MASK                           EVENT_MASK(0)
 
 /**
  * @brief   Event mask to identify OS events.
  */
-#define OSEVENT_MASK                            EVENT_MASK(1)
+#define _OSEVENT_MASK                           EVENT_MASK(1)
 
 /**
  * @brief   Listener object for I/O events.
@@ -172,8 +172,8 @@ int main(void)
 #endif
 
   /* event associations */
-  chEvtRegisterMask(&aos.events.io.source, &_eventListenerIO, IOEVENT_MASK);
-  chEvtRegisterMask(&aos.events.os.source, &_eventListenerOS, OSEVENT_MASK);
+  chEvtRegisterMask(&aos.events.io.source, &_eventListenerIO, _IOEVENT_MASK);
+  chEvtRegisterMask(&aos.events.os.source, &_eventListenerOS, _OSEVENT_MASK);
 
 #if defined(AMIROOS_CFG_MAIN_INIT_HOOK_5)
 #if defined(AMIROOS_CFG_MAIN_INIT_HOOK_5_ARGS)
@@ -309,7 +309,7 @@ int main(void)
 
     switch (eventmask) {
       // if this was an I/O event
-      case IOEVENT_MASK:
+      case _IOEVENT_MASK:
         // evaluate flags
         eventflags = chEvtGetAndClearFlags(&_eventListenerIO);
         // PD event
@@ -325,7 +325,7 @@ int main(void)
         break;
 
       // if this was an OS event
-      case OSEVENT_MASK:
+      case _OSEVENT_MASK:
         // evaluate flags
         eventflags = chEvtGetAndClearFlags(&_eventListenerOS);
         switch (eventflags) {

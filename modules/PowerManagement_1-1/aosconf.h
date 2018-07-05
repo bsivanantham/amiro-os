@@ -130,9 +130,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
  * @brief   Shell thread priority.
+ * @details Thread priorities are specified as an integer value.
+ *          Predefined ranges are:
+ *            lowest  ┌ THD_LOWPRIO_MIN
+ *                    │ ...
+ *                    └ THD_LOWPRIO_MAX
+ *                    ┌ THD_NORMALPRIO_MIN
+ *                    │ ...
+ *                    └ THD_NORMALPRIO_MAX
+ *                    ┌ THD_HIGHPRIO_MIN
+ *                    │ ...
+ *                    └ THD_HIGHPRIO_MAX
+ *                    ┌ THD_RTPRIO_MIN
+ *                    │ ...
+ *            highest └ THD_RTPRIO_MAX
  */
 #if !defined(OS_CFG_SHELL_THREADPRIO)
-  #define AMIROOS_CFG_SHELL_THREADPRIO          THD_NORMALPRIO_MIN
+  #define AMIROOS_CFG_SHELL_THREADPRIO          AOS_THD_NORMALPRIO_MIN
 #else
   #define AMIROOS_CFG_SHELL_THREADPRIO          OS_CFG_SHELL_THREADPRIO
 #endif

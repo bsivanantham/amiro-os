@@ -44,8 +44,8 @@ static inline void _setupTimer(aos_timer_t* timer)
   // if the wakeup time is more than TIME_IMMEDIATE in the future
   if ( (timer->wkuptime > uptime) && ((timer->wkuptime - uptime) > TIME_IMMEDIATE) ) {
     // split the time delta if necessary
-    if ((timer->wkuptime - uptime) > TIMER_MAX_INTERVAL_US) {
-      chVTSetI(&(timer->vt), US2ST(TIMER_MAX_INTERVAL_US), _intermediateCb, timer);
+    if ((timer->wkuptime - uptime) > AOS_TIMER_MAX_INTERVAL_US) {
+      chVTSetI(&(timer->vt), US2ST(AOS_TIMER_MAX_INTERVAL_US), _intermediateCb, timer);
     } else {
       chVTSetI(&(timer->vt), US2ST(timer->wkuptime - uptime), _fireCb, timer);
     }
