@@ -86,6 +86,11 @@ extern SerialConfig moduleHalProgIfConfig;
  */
 extern SPIConfig moduleHalSpiLightConfig;
 
+/**
+ * @brief   Real-Time Clock driver.
+ */
+#define MODULE_HAL_RTC                          RTCD1
+
 /** @} */
 
 /*===========================================================================*/

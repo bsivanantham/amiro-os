@@ -65,9 +65,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define AOS_SHELL_CONFIG_PROMPT_UPTIME            (1 << 2)
 
 /**
+ * @brief   Shell prompt configuration to additionally print the date and time with the prompt.
+ */
+#define AOS_SHELL_CONFIG_PROMPT_DATETIME          (2 << 2)
+
+/**
  * @brief   Shell prompt configuration to additionally print the system uptime with the prompt.
  */
-#define AOS_SHELL_CONFIG_MATCH_CASE               (1 << 3)
+#define AOS_SHELL_CONFIG_MATCH_CASE               (1 << 4)
 
 /**
  * @brief   Shell I/O channel flag whether the channel is attached to a list.

@@ -175,6 +175,8 @@ extern "C" {
   void aosSysStart(void);
   eventmask_t aosSysSsspStartupOsInitSyncCheck(event_listener_t* syncEvtListener);
   void aosSysGetUptimeX(aos_timestamp_t* ut);
+  void aosSysGetDateTime(struct tm* dt);
+  void aosSysSetDateTime(struct tm* dt);
   void aosSysShutdownInit(aos_shutdown_t shutdown);
   void aosSysStop(void);
   void aosSysDeinit(void);

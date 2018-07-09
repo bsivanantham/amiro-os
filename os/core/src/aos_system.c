@@ -20,7 +20,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <amiroos.h>
 #include <amiroblt.h>
+#include <module.h>
 #include <string.h>
+#include <stdlib.h>
 #if (AMIROOS_CFG_TESTS_ENABLE == true)
 #include <ch_test.h>
 #endif
@@ -250,13 +252,13 @@ static void _printSystemInfo(BaseSequentialStream* stream)
 #endif
   _printSystemInfoLine(stream, "Architecture", SYSTEM_INFO_NAMEWIDTH, "%s\n", PORT_ARCHITECTURE_NAME);
   _printSystemInfoSeparator(stream, '-', SYSTEM_INFO_WIDTH);
-  _printSystemInfoLine(stream, "AMiRo-OS" ,SYSTEM_INFO_NAMEWIDTH, "%u.%u.%u %s (SSSP %u.%u)\n", AMIROOS_VERSION_MAJOR, AMIROOS_VERSION_MINOR, AMIROOS_VERSION_PATCH, AMIROOS_RELEASE_TYPE, AOS_SYSTEM_SSSP_MAJOR, AOS_SYSTEM_SSSP_MINOR);
-  _printSystemInfoLine(stream, "AMiRo-LLD" ,SYSTEM_INFO_NAMEWIDTH, "%u.%u.%u %s (periphAL %u.%u)\n", AMIRO_LLD_VERSION_MAJOR, AMIRO_LLD_VERSION_MINOR, AMIRO_LLD_VERSION_PATCH, AMIRO_LLD_RELEASE_TYPE, PERIPHAL_VERSION_MAJOR, PERIPHAL_VERSION_MINOR);
-  _printSystemInfoLine(stream, "ChibiOS/RT" ,SYSTEM_INFO_NAMEWIDTH, "%u.%u.%u %s\n", CH_KERNEL_MAJOR, CH_KERNEL_MINOR, CH_KERNEL_PATCH, (CH_KERNEL_STABLE == 1) ? "stable" : "non-stable");
-  _printSystemInfoLine(stream, "ChibiOS/HAL",SYSTEM_INFO_NAMEWIDTH, "%u.%u.%u %s\n", CH_HAL_MAJOR, CH_HAL_MINOR, CH_HAL_PATCH, (CH_HAL_STABLE == 1) ? "stable" : "non-stable");
-  _printSystemInfoLine(stream, "build type",SYSTEM_INFO_NAMEWIDTH,"%s\n", (AMIROOS_CFG_DBG == true) ? "debug" : "release");
-  _printSystemInfoLine(stream, "Compiler" ,SYSTEM_INFO_NAMEWIDTH, "%s %u.%u.%u\n", "GCC", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__); // TODO: support other compilers than GCC
-  _printSystemInfoLine(stream, "Compiled" ,SYSTEM_INFO_NAMEWIDTH, "%s - %s\n", __DATE__, __TIME__);
+  _printSystemInfoLine(stream, "AMiRo-OS" , SYSTEM_INFO_NAMEWIDTH, "%u.%u.%u %s (SSSP %u.%u)\n", AMIROOS_VERSION_MAJOR, AMIROOS_VERSION_MINOR, AMIROOS_VERSION_PATCH, AMIROOS_RELEASE_TYPE, AOS_SYSTEM_SSSP_MAJOR, AOS_SYSTEM_SSSP_MINOR);
+  _printSystemInfoLine(stream, "AMiRo-LLD" , SYSTEM_INFO_NAMEWIDTH, "%u.%u.%u %s (periphAL %u.%u)\n", AMIRO_LLD_VERSION_MAJOR, AMIRO_LLD_VERSION_MINOR, AMIRO_LLD_VERSION_PATCH, AMIRO_LLD_RELEASE_TYPE, PERIPHAL_VERSION_MAJOR, PERIPHAL_VERSION_MINOR);
+  _printSystemInfoLine(stream, "ChibiOS/RT" , SYSTEM_INFO_NAMEWIDTH, "%u.%u.%u %s\n", CH_KERNEL_MAJOR, CH_KERNEL_MINOR, CH_KERNEL_PATCH, (CH_KERNEL_STABLE == 1) ? "stable" : "non-stable");
+  _printSystemInfoLine(stream, "ChibiOS/HAL", SYSTEM_INFO_NAMEWIDTH, "%u.%u.%u %s\n", CH_HAL_MAJOR, CH_HAL_MINOR, CH_HAL_PATCH, (CH_HAL_STABLE == 1) ? "stable" : "non-stable");
+  _printSystemInfoLine(stream, "build type", SYSTEM_INFO_NAMEWIDTH,"%s\n", (AMIROOS_CFG_DBG == true) ? "debug" : "release");
+  _printSystemInfoLine(stream, "Compiler" , SYSTEM_INFO_NAMEWIDTH, "%s %u.%u.%u\n", "GCC", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__); // TODO: support other compilers than GCC
+  _printSystemInfoLine(stream, "Compiled" , SYSTEM_INFO_NAMEWIDTH, "%s - %s\n", __DATE__, __TIME__);
   _printSystemInfoSeparator(stream, '-', SYSTEM_INFO_WIDTH);
   if (BL_CALLBACK_TABLE_ADDRESS->magicNumber == BL_MAGIC_NUMBER) {
     _printSystemInfoLine(stream, "AMiRo-BLT", SYSTEM_INFO_NAMEWIDTH, "%u.%u.%u %s (SSSP %u.%u)\n", BL_CALLBACK_TABLE_ADDRESS->vBootloader.major, BL_CALLBACK_TABLE_ADDRESS->vBootloader.minor, BL_CALLBACK_TABLE_ADDRESS->vBootloader.patch,
@@ -282,6 +284,14 @@ static void _printSystemInfo(BaseSequentialStream* stream)
       aosprintf("Bootloader incompatible or not available.\n");
     }
   }
+  _printSystemInfoSeparator(stream, '-', SYSTEM_INFO_WIDTH);
+  struct tm dt;
+  aosSysGetDateTime(&dt);
+  _printSystemInfoLine(stream, "Date", SYSTEM_INFO_NAMEWIDTH, "%s %02u-%02u-%04u\n", (dt.tm_wday == 0) ? "Sunday" : (dt.tm_wday == 1) ? "Monday" : (dt.tm_wday == 2) ? "Tuesday" : (dt.tm_wday == 3) ? "Wednesday" : (dt.tm_wday == 4) ? "Thursday" : (dt.tm_wday == 5) ? "Friday" : "Saturday",
+                       dt.tm_mday,
+                       dt.tm_mon + 1,
+                       dt.tm_year + 1900);
+  _printSystemInfoLine(stream, "Time", SYSTEM_INFO_NAMEWIDTH, "%02u:%02u:%02u\n", dt.tm_hour, dt.tm_min, dt.tm_sec);
   _printSystemInfoSeparator(stream, '=', SYSTEM_INFO_WIDTH);
 
   return;
@@ -326,12 +336,22 @@ static int _shellcmd_configcb(BaseSequentialStream* stream, int argc, char* argv
               retval = AOS_OK;
             }
             else if (strcmp(argv[3], "notime") == 0) {
-              aos.shell->config &= ~AOS_SHELL_CONFIG_PROMPT_UPTIME;
+              aos.shell->config &= ~(AOS_SHELL_CONFIG_PROMPT_UPTIME | AOS_SHELL_CONFIG_PROMPT_DATETIME);
               retval = AOS_OK;
             }
             else if (strcmp(argv[3], "uptime") == 0) {
+              aos.shell->config &= ~AOS_SHELL_CONFIG_PROMPT_DATETIME;
               aos.shell->config |= AOS_SHELL_CONFIG_PROMPT_UPTIME;
               retval = AOS_OK;
+            }
+            else if (strcmp(argv[3], "date&time") == 0) {
+              aos.shell->config &= ~AOS_SHELL_CONFIG_PROMPT_UPTIME;
+              aos.shell->config |= AOS_SHELL_CONFIG_PROMPT_DATETIME;
+              retval = AOS_OK;
+            }
+            else {
+              chprintf(stream, "unknown option '%s'\n", argv[3]);
+              return AOS_INVALID_ARGUMENTS;
             }
           }
         }
@@ -355,15 +375,62 @@ static int _shellcmd_configcb(BaseSequentialStream* stream, int argc, char* argv
         chprintf(stream, "current shell configuration:\n");
         chprintf(stream, "  prompt text:   %s\n",
                  (aos.shell->prompt != NULL) ? aos.shell->prompt : "n/a");
+        char time[10];
+        switch (aos.shell->config & (AOS_SHELL_CONFIG_PROMPT_UPTIME | AOS_SHELL_CONFIG_PROMPT_DATETIME)) {
+          case AOS_SHELL_CONFIG_PROMPT_UPTIME:
+            strcpy(time, "uptime"); break;
+          case AOS_SHELL_CONFIG_PROMPT_DATETIME:
+            strcpy(time, "date&time"); break;
+          default:
+            strcpy(time, "no time"); break;
+        }
         chprintf(stream, "  prompt style:  %s, %s\n",
                  (aos.shell->config & AOS_SHELL_CONFIG_PROMPT_MINIMAL) ? "minimal" : "text",
-                 (aos.shell->config & AOS_SHELL_CONFIG_PROMPT_UPTIME) ? "system uptime" : "no time");
+                 time);
         chprintf(stream, "  input method:  %s\n",
                  (aos.shell->config & AOS_SHELL_CONFIG_INPUT_OVERWRITE) ? "replace" : "insert");
         chprintf(stream, "  text matching: %s\n",
                  (aos.shell->config & AOS_SHELL_CONFIG_MATCH_CASE) ? "case sensitive" : "case insensitive");
         retval = AOS_OK;
       }
+    }
+    // if the user wants to configure the date or time
+    else if (strcmp(argv[1], "--date&time") == 0 && argc == 4) {
+      struct tm dt;
+      aosSysGetDateTime(&dt);
+      unsigned int val = atoi(argv[3]);
+      if (strcmp(argv[2], "year") == 0) {
+        dt.tm_year = val - 1900;
+      }
+      else if (strcmp(argv[2], "month") == 0 && val <= 12) {
+        dt.tm_mon = val - 1;
+      }
+      else if (strcmp(argv[2], "day") == 0 && val <= 31) {
+        dt.tm_mday = val;
+      }
+      else if (strcmp(argv[2], "hour") == 0 && val < 24) {
+        dt.tm_hour = val;
+      }
+      else if (strcmp(argv[2], "minute") == 0 && val < 60) {
+        dt.tm_min = val;
+      }
+      else if (strcmp(argv[2], "second") == 0 && val < 60) {
+        dt.tm_sec = val;
+      }
+      else {
+        chprintf(stream, "unknown option '%s' or value '%s'\n", argv[2], argv[3]);
+        return AOS_INVALID_ARGUMENTS;
+      }
+      dt.tm_wday = aosTimeDayOfWeekFromDate(dt.tm_mday, dt.tm_mon+1, dt.tm_year+1900) % 7;
+      aosSysSetDateTime(&dt);
+
+      // read and print new date and time
+      aosSysGetDateTime(&dt);
+      chprintf(stream, "date/time set to %02u:%02u:%02u @ %02u-%02u-%04u\n",
+               dt.tm_hour, dt.tm_min, dt.tm_sec,
+               dt.tm_mday, dt.tm_mon+1, dt.tm_year+1900);
+
+      retval = AOS_OK;
     }
   }
 
@@ -376,10 +443,19 @@ static int _shellcmd_configcb(BaseSequentialStream* stream, int argc, char* argv
     chprintf(stream, "  --shell [OPT [VAL]]\n");
     chprintf(stream, "    Set or retrieve shell configuration.\n");
     chprintf(stream, "    Possible OPTs and VALs are:\n");
-    chprintf(stream, "      prompt text|minimal|uptime|notime\n");
+    chprintf(stream, "      prompt text|minimal|uptime|date&time|notime\n");
     chprintf(stream, "        Configures the prompt.\n");
     chprintf(stream, "      match casesensitive|caseinsenitive\n");
     chprintf(stream, "        Configures string matching.\n");
+    chprintf(stream, "  --date&time OPT VAL\n");
+    chprintf(stream, "    Set the date/time value of OPT to VAL.\n");
+    chprintf(stream, "    Possible OPTs are:\n");
+    chprintf(stream, "      year\n");
+    chprintf(stream, "      month\n");
+    chprintf(stream, "      day\n");
+    chprintf(stream, "      hour\n");
+    chprintf(stream, "      minute\n");
+    chprintf(stream, "      second\n");
   }
 
   return (argc > 1 && strcmp(argv[1], "--help") == 0) ? AOS_OK : retval;
@@ -577,7 +653,6 @@ static void _signalSyncCallback(EXTDriver* extp, expchannel_t channel)
  *
  * @param[in] par   Generic parameter.
  */
-#include <module.h>
 static void _uptimeCallback(void* par)
 {
   (void)par;
@@ -794,6 +869,38 @@ inline void aosSysGetUptimeX(aos_timestamp_t* ut)
   aosDbgCheck(ut != NULL);
 
   *ut = _uptime + LL_ST2US(chVTGetSystemTimeX() - _synctime);
+
+  return;
+}
+
+/**
+ * @brief   retrieves the date and time from the MCU clock.
+ *
+ * @param[out] td   The date and time.
+ */
+void aosSysGetDateTime(struct tm* dt)
+{
+  aosDbgCheck(dt != NULL);
+
+  RTCDateTime rtc;
+  rtcGetTime(&MODULE_HAL_RTC, &rtc);
+  rtcConvertDateTimeToStructTm(&rtc, dt, NULL);
+
+  return;
+}
+
+/**
+ * @brief   set the date and time of the MCU clock.
+ *
+ * @param[in] dt    The date and time to set.
+ */
+void aosSysSetDateTime(struct tm* dt)
+{
+  aosDbgCheck(dt != NULL);
+
+  RTCDateTime rtc;
+  rtcConvertStructTmToDateTime(dt, 0, &rtc);
+  rtcSetTime(&MODULE_HAL_RTC, &rtc);
 
   return;
 }

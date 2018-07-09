@@ -241,19 +241,37 @@ static void _printPrompt(aos_shell_t* shell)
 {
   aosDbgCheck(shell != NULL);
 
-  // print the system uptime before prompt is configured
-  if (shell->config & AOS_SHELL_CONFIG_PROMPT_UPTIME) {
-    // get current system uptime
-    aos_timestamp_t uptime;
-    aosSysGetUptime(&uptime);
+  // print some time informattion before prompt if configured
+  if (shell->config & (AOS_SHELL_CONFIG_PROMPT_UPTIME | AOS_SHELL_CONFIG_PROMPT_DATETIME)) {
+    // printf the system uptime
+    if ((shell->config & (AOS_SHELL_CONFIG_PROMPT_UPTIME | AOS_SHELL_CONFIG_PROMPT_DATETIME)) == AOS_SHELL_CONFIG_PROMPT_UPTIME) {
+      // get current system uptime
+      aos_timestamp_t uptime;
+      aosSysGetUptime(&uptime);
 
-    chprintf((BaseSequentialStream*)&shell->stream, "[%01u:%02u:%02u:%02u:%03u:%03u] ",
-             (uint32_t)(uptime / MICROSECONDS_PER_DAY),
-             (uint8_t)(uptime % MICROSECONDS_PER_DAY / MICROSECONDS_PER_HOUR),
-             (uint8_t)(uptime % MICROSECONDS_PER_HOUR / MICROSECONDS_PER_MINUTE),
-             (uint8_t)(uptime % MICROSECONDS_PER_MINUTE / MICROSECONDS_PER_SECOND),
-             (uint16_t)(uptime % MICROSECONDS_PER_SECOND / MICROSECONDS_PER_MILLISECOND),
-             (uint16_t)(uptime % MICROSECONDS_PER_MILLISECOND / MICROSECONDS_PER_MICROSECOND));
+      chprintf((BaseSequentialStream*)&shell->stream, "[%01u:%02u:%02u:%02u:%03u:%03u] ",
+               (uint32_t)(uptime / MICROSECONDS_PER_DAY),
+               (uint8_t)(uptime % MICROSECONDS_PER_DAY / MICROSECONDS_PER_HOUR),
+               (uint8_t)(uptime % MICROSECONDS_PER_HOUR / MICROSECONDS_PER_MINUTE),
+               (uint8_t)(uptime % MICROSECONDS_PER_MINUTE / MICROSECONDS_PER_SECOND),
+               (uint16_t)(uptime % MICROSECONDS_PER_SECOND / MICROSECONDS_PER_MILLISECOND),
+               (uint16_t)(uptime % MICROSECONDS_PER_MILLISECOND / MICROSECONDS_PER_MICROSECOND));
+    }
+    else if ((shell->config & (AOS_SHELL_CONFIG_PROMPT_UPTIME | AOS_SHELL_CONFIG_PROMPT_DATETIME)) == AOS_SHELL_CONFIG_PROMPT_DATETIME) {
+      // get current RTC time
+      struct tm dt;
+      aosSysGetDateTime(&dt);
+      chprintf((BaseSequentialStream*)&shell->stream, "[%02u-%02u-%04u|%02u:%02u:%02u] ",
+               dt.tm_mday,
+               dt.tm_mon + 1,
+               dt.tm_year + 1900,
+               dt.tm_hour,
+               dt.tm_min,
+               dt.tm_sec);
+    }
+    else {
+      aosDbgAssert(false);
+    }
   }
 
   // print the actual prompt string

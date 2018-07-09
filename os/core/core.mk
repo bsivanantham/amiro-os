@@ -35,6 +35,7 @@ AMIROOSCORECSRC = $(AMIROOS_CORE_DIR)src/aos_debug.c \
                   $(AMIROOS_CORE_DIR)src/aos_shell.c \
                   $(AMIROOS_CORE_DIR)src/aos_system.c \
                   $(AMIROOS_CORE_DIR)src/aos_thread.c \
+                  $(AMIROOS_CORE_DIR)src/aos_time.c \
                   $(AMIROOS_CORE_DIR)src/aos_timer.c \
                   $(AMIROOS_CORE_DIR)src/aos_unittest.c
 

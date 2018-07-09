@@ -153,6 +153,11 @@ extern SPIConfig moduleHalSpiAccelerometerConfig;
  */
 extern SPIConfig moduleHalSpiGyroscopeConfig;
 
+/**
+ * @brief   Real-Time Clock driver.
+ */
+#define MODULE_HAL_RTC                          RTCD1
+
 /** @} */
 
 /*===========================================================================*/

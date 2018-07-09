@@ -204,4 +204,12 @@ typedef aos_timestamp_t aos_longinterval_t;
 #define MILLENIUMS_PER_DECADE         ((float)MILLENIUMS_PER_MILLENIUM / (float)DECADES_PER_MILLENIUM)
 #define MILLENIUMS_PER_CENTURY        ((float)MILLENIUMS_PER_MILLENIUM / (float)CENTURIES_PER_MILLENIUM)
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+  uint8_t aosTimeDayOfWeekFromDate(const uint16_t day, const uint8_t month, const uint16_t year);
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* _AMIROOS_TIME_H_ */

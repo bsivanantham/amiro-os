@@ -138,6 +138,11 @@ extern PWMConfig moduleHalPwmBuzzerConfig;
  */
 extern SerialConfig moduleHalProgIfConfig;
 
+/**
+ * @brief   Real-Time Clock driver.
+ */
+#define MODULE_HAL_RTC                          RTCD1
+
 /** @} */
 
 /*===========================================================================*/
