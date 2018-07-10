@@ -25,14 +25,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * Kernel parameters and options
  */
 
-#ifndef AMIROOS_CFG_SSSP_MASTER
-  #error "AMIROOS_CFG_SSSP_MASTER not defined in aosconf.h"
-#endif
-
-#ifndef AMIROOS_CFG_SSSP_SYSSYNCPERIOD
-  #error "AMIROOS_CFG_SSSP_SYSSYNCPERIOD not defined in aosconf.h"
-#endif
-
 #ifndef AMIROOS_CFG_DBG
   #error "AMIROOS_CFG_DBG not defined in aosconf.h"
 #endif
@@ -47,6 +39,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #ifndef AMIROOS_CFG_MAIN_LOOP_TIMEOUT
   #error "AMIROOS_CFG_MAIN_LOOP_TIMEOUT not defined in aosconf.h"
+#endif
+
+/*
+ * SSSP parameters and options
+ */
+
+#ifndef AMIROOS_CFG_SSSP_MASTER
+  #error "AMIROOS_CFG_SSSP_MASTER not defined in aosconf.h"
+#endif
+
+#ifndef AMIROOS_CFG_SSSP_SYSSYNCPERIOD
+  #error "AMIROOS_CFG_SSSP_SYSSYNCPERIOD not defined in aosconf.h"
 #endif
 
 /*

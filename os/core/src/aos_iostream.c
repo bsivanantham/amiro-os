@@ -21,8 +21,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <aos_debug.h>
 #include <chprintf.h>
 
-
-
 /**
  * @brief   Implementation of the BaseAsynchronousChannel write() method (inherited from BaseSequentialStream).
  */

@@ -29,12 +29,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /**
  * @brief   Event mask to identify I/O events.
  */
-#define _IOEVENT_MASK                           EVENT_MASK(0)
+#define IOEVENT_MASK                            EVENT_MASK(0)
 
 /**
  * @brief   Event mask to identify OS events.
  */
-#define _OSEVENT_MASK                           EVENT_MASK(1)
+#define OSEVENT_MASK                            EVENT_MASK(1)
 
 /**
  * @brief   Listener object for I/O events.
@@ -75,7 +75,12 @@ AMIROOS_CFG_MAIN_EXTRA_STATIC_VARIABLES
  */
 static inline void _unexpectedEventError(eventmask_t mask, eventflags_t flags)
 {
-  aosprintf("unexpected/unknown event recieved. mask: 0x%08X; flags: 0x%08X\n", mask, flags);
+#if (AMIROOS_CFG_DBG == true)
+  aosprintf("unexpected/unknown event received. mask: 0x%08X; flags: 0x%08X\n", mask, flags);
+#else
+  (void)mask;
+  (void)flags;
+#endif
   return;
 }
 
@@ -136,13 +141,11 @@ int main(void)
 #endif
 
   // AMiRo-OS and custom OS additions (if any)
-  aosSysInit(&MODULE_HAL_EXT,
-             &moduleHalExtConfig,
-             &moduleSsspPd,
-             &moduleSsspSync,
-             MODULE_OS_IOEVENTFLAGS_SYSPD,
-             MODULE_OS_IOEVENTFLAGS_SYSSYNC,
-             moduleShellPrompt);
+#if (AMIROOS_CFG_SHELL_ENABLE == true)
+  aosSysInit(moduleShellPrompt);
+#else
+  aosSysInit();
+#endif
 #ifdef MODULE_INIT_OS_EXTRA
   MODULE_INIT_OS_EXTRA();
 #endif
@@ -172,8 +175,8 @@ int main(void)
 #endif
 
   /* event associations */
-  chEvtRegisterMask(&aos.events.io.source, &_eventListenerIO, _IOEVENT_MASK);
-  chEvtRegisterMask(&aos.events.os.source, &_eventListenerOS, _OSEVENT_MASK);
+  chEvtRegisterMask(&aos.events.io, &_eventListenerIO, IOEVENT_MASK);
+  chEvtRegisterMask(&aos.events.os, &_eventListenerOS, OSEVENT_MASK);
 
 #if defined(AMIROOS_CFG_MAIN_INIT_HOOK_5)
 #if defined(AMIROOS_CFG_MAIN_INIT_HOOK_5_ARGS)
@@ -199,7 +202,7 @@ int main(void)
   aosShellChannelInit(&_stdshellchannel, (BaseAsynchronousChannel*)&MODULE_HAL_PROGIF);
   aosShellChannelInputEnable(&_stdshellchannel);
   aosShellChannelOutputEnable(&_stdshellchannel);
-  aosShellStreamAddChannel(&aos.shell->stream, &_stdshellchannel);
+  aosShellStreamAddChannel(&aos.shell.stream, &_stdshellchannel);
 #endif
 #endif
 
@@ -236,7 +239,7 @@ int main(void)
 #endif
 #endif
 
-  /* SSSP startup outro (end of startup stage 2) synchronization */
+  /* SSSP startup OS synchronization phase (end of startup stage 2) */
   while ((eventmask = aosSysSsspStartupOsInitSyncCheck(&_eventListenerIO)) != 0) {
     /*
      * This code is executed if the received event was not about the SYS_SYNC control signal.
@@ -245,8 +248,8 @@ int main(void)
     // unexpected IO events
     if (eventmask & _eventListenerIO.events) {
       eventflags = chEvtGetAndClearFlags(&_eventListenerIO);
-#ifdef MODULE_SSP_STARTUP_OUTRO_IO_EVENT
-      MODULE_SSP_STARTUP_OUTRO_IO_EVENT(eventmask, eventflags);
+#ifdef MODULE_SSSP_STARTUP_OSINIT_OUTRO_IOEVENT_HOOK
+      MODULE_SSSP_STARTUP_OSINIT_OUTRO_IOEVENT_HOOK(eventmask, eventflags);
 #else
       _unexpectedEventError(eventmask, eventflags);
 #endif
@@ -256,13 +259,10 @@ int main(void)
       eventflags = chEvtGetAndClearFlags(&_eventListenerOS);
       _unexpectedEventError(eventmask, eventflags);
     }
-#if (AMIROOS_CFG_DBG == true)
     // unknown event (must never occur, thus disabled for release builds)
     else {
-      eventflags = 0;
       _unexpectedEventError(eventmask, eventflags);
     }
-#endif
   }
 
 #if defined(AMIROOS_CFG_MAIN_INIT_HOOK_8)
@@ -309,11 +309,11 @@ int main(void)
 
     switch (eventmask) {
       // if this was an I/O event
-      case _IOEVENT_MASK:
+      case IOEVENT_MASK:
         // evaluate flags
         eventflags = chEvtGetAndClearFlags(&_eventListenerIO);
         // PD event
-        if (eventflags & MODULE_OS_IOEVENTFLAGS_SYSPD) {
+        if (eventflags & MODULE_SSSP_EVENTFLAGS_PD) {
           shutdown = AOS_SHUTDOWN_PASSIVE;
         }
         // all other events
@@ -325,7 +325,7 @@ int main(void)
         break;
 
       // if this was an OS event
-      case _OSEVENT_MASK:
+      case OSEVENT_MASK:
         // evaluate flags
         eventflags = chEvtGetAndClearFlags(&_eventListenerOS);
         switch (eventflags) {

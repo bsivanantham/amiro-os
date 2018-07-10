@@ -54,16 +54,6 @@ static int _shellcmd_kerneltestcb(BaseSequentialStream* stream, int argc, char* 
 #endif /* AMIROOS_CFG_TESTS_ENABLE == true */
 
 /**
- * @brief   PD signal GPIO.
- */
-static apalControlGpio_t* _gpioPd;
-
-/**
- * @brief   Sync signal GPIO.
- */
-static apalControlGpio_t* _gpioSync;
-
-/**
  * @brief   Timer to accumulate system uptime.
  */
 static virtual_timer_t _systimer;
@@ -91,11 +81,6 @@ static aos_timestamp_t _syssynctime;
 #endif
 
 #if (AMIROOS_CFG_SHELL_ENABLE == true) || defined(__DOXYGEN__)
-/**
- * @brief   System shell.
- */
-static aos_shell_t _shell;
-
 /**
  * @brief   Shell thread working area.
  */
@@ -153,29 +138,7 @@ static aos_shellcommand_t _shellcmd_kerneltest = {
 /**
  * @brief   Global system object.
  */
-aos_system_t aos = {
-  /* SSSP stage       */ AOS_SSSP_STARTUP_2_1,
-  /* I/O stream       */ {
-    /* channel          */ NULL,
-  },
-  /* event            */ {
-    /* I/O              */ {
-      /* source           */ {
-        /* next listener    */ NULL,
-      },
-      /* flagsSignalPd    */ 0,
-      /* flagsSignalSync  */ 0,
-    },
-    /* OS               */ {
-      /* source           */ {
-        /* next listener    */ NULL,
-      }
-    },
-  },
-#if (AMIROOS_CFG_SHELL_ENABLE == true)
-  /* shell            */ &_shell,
-#endif
-};
+aos_system_t aos;
 
 /**
  * @brief   Print a separator line.
@@ -328,25 +291,25 @@ static int _shellcmd_configcb(BaseSequentialStream* stream, int argc, char* argv
           if (argc > 3) {
             // handle the option
             if (strcmp(argv[3], "text") == 0) {
-              aos.shell->config &= ~AOS_SHELL_CONFIG_PROMPT_MINIMAL;
+              aos.shell.config &= ~AOS_SHELL_CONFIG_PROMPT_MINIMAL;
               retval = AOS_OK;
             }
             else if (strcmp(argv[3], "minimal") == 0) {
-              aos.shell->config |= AOS_SHELL_CONFIG_PROMPT_MINIMAL;
+              aos.shell.config |= AOS_SHELL_CONFIG_PROMPT_MINIMAL;
               retval = AOS_OK;
             }
             else if (strcmp(argv[3], "notime") == 0) {
-              aos.shell->config &= ~(AOS_SHELL_CONFIG_PROMPT_UPTIME | AOS_SHELL_CONFIG_PROMPT_DATETIME);
+              aos.shell.config &= ~(AOS_SHELL_CONFIG_PROMPT_UPTIME | AOS_SHELL_CONFIG_PROMPT_DATETIME);
               retval = AOS_OK;
             }
             else if (strcmp(argv[3], "uptime") == 0) {
-              aos.shell->config &= ~AOS_SHELL_CONFIG_PROMPT_DATETIME;
-              aos.shell->config |= AOS_SHELL_CONFIG_PROMPT_UPTIME;
+              aos.shell.config &= ~AOS_SHELL_CONFIG_PROMPT_DATETIME;
+              aos.shell.config |= AOS_SHELL_CONFIG_PROMPT_UPTIME;
               retval = AOS_OK;
             }
             else if (strcmp(argv[3], "date&time") == 0) {
-              aos.shell->config &= ~AOS_SHELL_CONFIG_PROMPT_UPTIME;
-              aos.shell->config |= AOS_SHELL_CONFIG_PROMPT_DATETIME;
+              aos.shell.config &= ~AOS_SHELL_CONFIG_PROMPT_UPTIME;
+              aos.shell.config |= AOS_SHELL_CONFIG_PROMPT_DATETIME;
               retval = AOS_OK;
             }
             else {
@@ -360,11 +323,11 @@ static int _shellcmd_configcb(BaseSequentialStream* stream, int argc, char* argv
           // there must be a further argument
           if (argc > 3) {
             if (strcmp(argv[3], "casesensitive") == 0) {
-              aos.shell->config |= AOS_SHELL_CONFIG_MATCH_CASE;
+              aos.shell.config |= AOS_SHELL_CONFIG_MATCH_CASE;
               retval = AOS_OK;
             }
             else if (strcmp(argv[3], "caseinsensitive") == 0) {
-              aos.shell->config &= ~AOS_SHELL_CONFIG_MATCH_CASE;
+              aos.shell.config &= ~AOS_SHELL_CONFIG_MATCH_CASE;
               retval = AOS_OK;
             }
           }
@@ -374,9 +337,9 @@ static int _shellcmd_configcb(BaseSequentialStream* stream, int argc, char* argv
       else {
         chprintf(stream, "current shell configuration:\n");
         chprintf(stream, "  prompt text:   %s\n",
-                 (aos.shell->prompt != NULL) ? aos.shell->prompt : "n/a");
+                 (aos.shell.prompt != NULL) ? aos.shell.prompt : "n/a");
         char time[10];
-        switch (aos.shell->config & (AOS_SHELL_CONFIG_PROMPT_UPTIME | AOS_SHELL_CONFIG_PROMPT_DATETIME)) {
+        switch (aos.shell.config & (AOS_SHELL_CONFIG_PROMPT_UPTIME | AOS_SHELL_CONFIG_PROMPT_DATETIME)) {
           case AOS_SHELL_CONFIG_PROMPT_UPTIME:
             strcpy(time, "uptime"); break;
           case AOS_SHELL_CONFIG_PROMPT_DATETIME:
@@ -385,12 +348,12 @@ static int _shellcmd_configcb(BaseSequentialStream* stream, int argc, char* argv
             strcpy(time, "no time"); break;
         }
         chprintf(stream, "  prompt style:  %s, %s\n",
-                 (aos.shell->config & AOS_SHELL_CONFIG_PROMPT_MINIMAL) ? "minimal" : "text",
+                 (aos.shell.config & AOS_SHELL_CONFIG_PROMPT_MINIMAL) ? "minimal" : "text",
                  time);
         chprintf(stream, "  input method:  %s\n",
-                 (aos.shell->config & AOS_SHELL_CONFIG_INPUT_OVERWRITE) ? "replace" : "insert");
+                 (aos.shell.config & AOS_SHELL_CONFIG_INPUT_OVERWRITE) ? "replace" : "insert");
         chprintf(stream, "  text matching: %s\n",
-                 (aos.shell->config & AOS_SHELL_CONFIG_MATCH_CASE) ? "case sensitive" : "case insensitive");
+                 (aos.shell.config & AOS_SHELL_CONFIG_MATCH_CASE) ? "case sensitive" : "case insensitive");
         retval = AOS_OK;
       }
     }
@@ -536,22 +499,22 @@ static int _shellcmd_shutdowncb(BaseSequentialStream* stream, int argc, char* ar
   // handle argument
   else {
     if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--hibernate") == 0) {
-      chEvtBroadcastFlags(&aos.events.os.source, AOS_SYSTEM_EVENTFLAGS_HIBERNATE);
+      chEvtBroadcastFlags(&aos.events.os, AOS_SYSTEM_EVENTFLAGS_HIBERNATE);
       chThdTerminate(currp);
       return AOS_OK;
     }
     else if (strcmp(argv[1], "-d") == 0 || strcmp(argv[1], "--deepsleep") == 0) {
-      chEvtBroadcastFlags(&aos.events.os.source, AOS_SYSTEM_EVENTFLAGS_DEEPSLEEP);
+      chEvtBroadcastFlags(&aos.events.os, AOS_SYSTEM_EVENTFLAGS_DEEPSLEEP);
       chThdTerminate(currp);
       return AOS_OK;
     }
     else if (strcmp(argv[1], "-t") == 0 || strcmp(argv[1], "--transportation") == 0) {
-      chEvtBroadcastFlags(&aos.events.os.source, AOS_SYSTEM_EVENTFLAGS_TRANSPORTATION);
+      chEvtBroadcastFlags(&aos.events.os, AOS_SYSTEM_EVENTFLAGS_TRANSPORTATION);
       chThdTerminate(currp);
       return AOS_OK;
     }
     else if (strcmp(argv[1], "-r") == 0 || strcmp(argv[1], "--restart") == 0) {
-      chEvtBroadcastFlags(&aos.events.os.source, AOS_SYSTEM_EVENTFLAGS_RESTART);
+      chEvtBroadcastFlags(&aos.events.os, AOS_SYSTEM_EVENTFLAGS_RESTART);
       chThdTerminate(currp);
       return AOS_OK;
     }
@@ -598,10 +561,9 @@ static int _shellcmd_kerneltestcb(BaseSequentialStream* stream, int argc, char* 
 static void _signalPdCallback(EXTDriver* extp, expchannel_t channel)
 {
   (void)extp;
-  (void)channel;
 
   chSysLockFromISR();
-  chEvtBroadcastFlagsI(&aos.events.io.source, aos.events.io.flagsSignalPd);
+  chEvtBroadcastFlagsI(&aos.events.io, (1 << channel));
   chSysUnlockFromISR();
 
   return;
@@ -616,11 +578,10 @@ static void _signalPdCallback(EXTDriver* extp, expchannel_t channel)
 static void _signalSyncCallback(EXTDriver* extp, expchannel_t channel)
 {
   (void)extp;
-  (void)channel;
 
 #if (AMIROOS_CFG_SSSP_MASTER == true)
   chSysLockFromISR();
-  chEvtBroadcastFlagsI(&aos.events.io.source, aos.events.io.flagsSignalSync);
+  chEvtBroadcastFlagsI(&aos.events.io, (1 << channel));
   chSysUnlockFromISR();
 #else
   apalControlGpioState_t s_state;
@@ -630,9 +591,9 @@ static void _signalSyncCallback(EXTDriver* extp, expchannel_t channel)
   // get current uptime
   aosSysGetUptimeX(&uptime);
   // read signal S
-  apalControlGpioGet(_gpioSync, &s_state);
+  apalControlGpioGet(&moduleSsspGpioSync, &s_state);
   // if S was toggled from on to off during SSSP operation phase
-  if (aos.ssspStage == AOS_SSSP_OPERATION && s_state == APAL_GPIO_OFF) {
+  if (aos.sssp.stage == AOS_SSSP_OPERATION && s_state == APAL_GPIO_OFF) {
     // align the uptime with the synchronization period
     if (uptime % AMIROOS_CFG_SSSP_SYSSYNCPERIOD < AMIROOS_CFG_SSSP_SYSSYNCPERIOD / 2) {
       _uptime -= uptime % AMIROOS_CFG_SSSP_SYSSYNCPERIOD;
@@ -641,7 +602,7 @@ static void _signalSyncCallback(EXTDriver* extp, expchannel_t channel)
     }
   }
   // broadcast event
-  chEvtBroadcastFlagsI(&aos.events.io.source, aos.events.io.flagsSignalSync);
+  chEvtBroadcastFlagsI(&aos.events.io, (1 << channel));
   chSysUnlockFromISR();
 #endif
 
@@ -686,9 +647,9 @@ static void _sysSyncTimerCallback(void* par)
 
   chSysLockFromISR();
   // read and toggle signal S
-  apalControlGpioGet(_gpioSync, &s_state);
+  apalControlGpioGet(&moduleSsspGpioSync, &s_state);
   s_state = (s_state == APAL_GPIO_ON) ? APAL_GPIO_OFF : APAL_GPIO_ON;
-  apalControlGpioSet(_gpioSync, s_state);
+  apalControlGpioSet(&moduleSsspGpioSync, s_state);
   // if S was toggled from off to on
   if (s_state == APAL_GPIO_ON) {
     // reconfigure the timer precisely, because the logically falling edge (next interrupt) snychronizes the system time
@@ -711,35 +672,18 @@ static void _sysSyncTimerCallback(void* par)
  * @brief   AMiRo-OS system initialization.
  * @note    Must be called from the system control thread (usually main thread).
  *
- * @param[in] extDrv        Pointer to the interrupt driver.
- * @param[in] extCfg        Configuration for the interrupt driver.
- * @param[in] gpioPd        GPIO of the PD signal.
- * @param[in] gpioSync      GPIO of the Sync signal
- * @param[in] evtFlagsPd    Event flags to be set when a PD interrupt occurs.
- * @param[in] evtFlagsSync  Event flags to be set when a Sync interrupt occurs.
  * @param[in] shellPrompt   String to be printed as prompt of the system shell.
- * @param[in] stdio         Default (usually physically) interface for I/O like shell.
  */
-void aosSysInit(EXTDriver* extDrv,
-                EXTConfig* extCfg,
-                apalControlGpio_t* gpioPd,
-                apalControlGpio_t* gpioSync,
-                eventflags_t evtFlagsPd,
-                eventflags_t evtFlagsSync,
-                const char* shellPrompt)
+#if (AMIROOS_CFG_SHELL_ENABLE == true) || defined(__DOXYGEN__)
+void aosSysInit(const char* shellPrompt)
+#else
+void aosSysInit(void)
+#endif
 {
-  // check arguments
-  aosDbgCheck(extDrv != NULL);
-  aosDbgCheck(extCfg != NULL);
-  aosDbgCheck(gpioPd != NULL);
-  aosDbgCheck(gpioSync != NULL);
-
   // set control thread to maximum priority
   chThdSetPriority(AOS_THD_CTRLPRIO);
 
   // set local variables
-  _gpioPd = gpioPd;
-  _gpioSync = gpioSync;
   chVTObjectInit(&_systimer);
   _synctime = 0;
   _uptime = 0;
@@ -749,36 +693,33 @@ void aosSysInit(EXTDriver* extDrv,
 #endif
 
   // set aos configuration
-  aos.ssspStage = AOS_SSSP_STARTUP_2_1;
+  aos.sssp.stage = AOS_SSSP_STARTUP_2_1;
+  aos.sssp.moduleId = 0;
   aosIOStreamInit(&aos.iostream);
-  chEvtObjectInit(&aos.events.io.source);
-  chEvtObjectInit(&aos.events.os.source);
-  aos.events.io.flagsSignalPd = evtFlagsPd;
-  aos.events.io.flagsSignalSync = evtFlagsSync;
+  chEvtObjectInit(&aos.events.io);
+  chEvtObjectInit(&aos.events.os);
 
   // setup external interrupt system
-  extCfg->channels[gpioPd->gpio->pad].cb = _signalPdCallback;
-  extCfg->channels[gpioSync->gpio->pad].cb = _signalSyncCallback;
-  extStart(extDrv, extCfg);
+  moduleHalExtConfig.channels[moduleSsspGpioPd.gpio->pad].cb = _signalPdCallback;
+  moduleHalExtConfig.channels[moduleSsspGpioSync.gpio->pad].cb = _signalSyncCallback;
+  extStart(&MODULE_HAL_EXT, &moduleHalExtConfig);
 
 #if (AMIROOS_CFG_SHELL_ENABLE == true)
   // init shell
-  aosShellInit(aos.shell,
-               &aos.events.os.source,
+  aosShellInit(&aos.shell,
+               &aos.events.os,
                shellPrompt,
                _shell_line,
                AMIROOS_CFG_SHELL_LINEWIDTH,
                _shell_arglist,
                AMIROOS_CFG_SHELL_MAXARGS);
   // add system commands
-  aosShellAddCommand(aos.shell, &_shellcmd_config);
-  aosShellAddCommand(aos.shell, &_shellcmd_info);
-  aosShellAddCommand(aos.shell, &_shellcmd_shutdown);
+  aosShellAddCommand(&aos.shell, &_shellcmd_config);
+  aosShellAddCommand(&aos.shell, &_shellcmd_info);
+  aosShellAddCommand(&aos.shell, &_shellcmd_shutdown);
 #if (AMIROOS_CFG_TESTS_ENABLE == true)
-  aosShellAddCommand(aos.shell, &_shellcmd_kerneltest);
+  aosShellAddCommand(&aos.shell, &_shellcmd_kerneltest);
 #endif
-#else
-  (void)shellPrompt;
 #endif
 
   return;
@@ -790,7 +731,7 @@ void aosSysInit(EXTDriver* extDrv,
 inline void aosSysStart(void)
 {
   // update the system SSSP stage
-  aos.ssspStage = AOS_SSSP_OPERATION;
+  aos.sssp.stage = AOS_SSSP_OPERATION;
 
   // print system information;
   _printSystemInfo((BaseSequentialStream*)&aos.iostream);
@@ -798,7 +739,7 @@ inline void aosSysStart(void)
 
 #if (AMIROOS_CFG_SHELL_ENABLE == true)
   // start system shell thread
-  aos.shell->thread = chThdCreateStatic(_shell_wa, sizeof(_shell_wa), AMIROOS_CFG_SHELL_THREADPRIO, aosShellThread, aos.shell);
+  aos.shell.thread = chThdCreateStatic(_shell_wa, sizeof(_shell_wa), AMIROOS_CFG_SHELL_THREADPRIO, aosShellThread, &aos.shell);
 #endif
 
   return;
@@ -822,21 +763,21 @@ eventmask_t aosSysSsspStartupOsInitSyncCheck(event_listener_t* syncEvtListener)
   apalControlGpioState_t s;
 
   // update the system SSSP stage
-  aos.ssspStage = AOS_SSSP_STARTUP_2_2;
+  aos.sssp.stage = AOS_SSSP_STARTUP_2_2;
 
   // deactivate the sync signal to indicate that the module is ready (SSSPv1 stage 2.1 of startup phase)
-  apalControlGpioSet(_gpioSync, APAL_GPIO_OFF);
+  apalControlGpioSet(&moduleSsspGpioSync, APAL_GPIO_OFF);
 
   // wait for any event to occur (do not apply any filter in order not to miss any event)
   m = chEvtWaitOne(ALL_EVENTS);
   f = chEvtGetAndClearFlags(syncEvtListener);
-  apalControlGpioGet(_gpioSync, &s);
+  apalControlGpioGet(&moduleSsspGpioSync, &s);
 
   // if the event was a system event,
   //   and it was fired because of the SysSync control signal,
   //   and the SysSync control signal has been deactivated
   if (m & syncEvtListener->events &&
-      f == aos.events.io.flagsSignalSync &&
+      f == MODULE_SSSP_EVENTFLAGS_SYNC &&
       s == APAL_GPIO_OFF) {
     chSysLock();
 #if (AMIROOS_CFG_SSSP_MASTER == true)
@@ -922,36 +863,36 @@ void aosSysShutdownInit(aos_shutdown_t shutdown)
 #endif
 
   // update the system SSSP stage
-  aos.ssspStage = AOS_SSSP_SHUTDOWN_1_1;
+  aos.sssp.stage = AOS_SSSP_SHUTDOWN_1_1;
 
   // activate the SYS_PD control signal only, if this module initiated the shutdown
   chSysLock();
   if (shutdown != AOS_SHUTDOWN_PASSIVE) {
-    apalControlGpioSet(_gpioPd, APAL_GPIO_ON);
+    apalControlGpioSet(&moduleSsspGpioPd, APAL_GPIO_ON);
   }
   // activate the SYS_SYNC signal
-  apalControlGpioSet(_gpioSync, APAL_GPIO_ON);
+  apalControlGpioSet(&moduleSsspGpioSync, APAL_GPIO_ON);
   chSysUnlock();
 
   switch (shutdown) {
     case AOS_SHUTDOWN_PASSIVE:
-      chEvtBroadcastFlags(&aos.events.os.source, AOS_SYSTEM_EVENTFLAGS_SHUTDOWN);
+      chEvtBroadcastFlags(&aos.events.os, AOS_SYSTEM_EVENTFLAGS_SHUTDOWN);
       aosprintf("shutdown request received...\n");
       break;
     case AOS_SHUTDOWN_HIBERNATE:
-      chEvtBroadcastFlags(&aos.events.os.source, AOS_SYSTEM_EVENTFLAGS_HIBERNATE);
+      chEvtBroadcastFlags(&aos.events.os, AOS_SYSTEM_EVENTFLAGS_HIBERNATE);
       aosprintf("shutdown to hibernate mode...\n");
       break;
     case AOS_SHUTDOWN_DEEPSLEEP:
-      chEvtBroadcastFlags(&aos.events.os.source, AOS_SYSTEM_EVENTFLAGS_DEEPSLEEP);
+      chEvtBroadcastFlags(&aos.events.os, AOS_SYSTEM_EVENTFLAGS_DEEPSLEEP);
       aosprintf("shutdown to deepsleep mode...\n");
       break;
     case AOS_SHUTDOWN_TRANSPORTATION:
-      chEvtBroadcastFlags(&aos.events.os.source, AOS_SYSTEM_EVENTFLAGS_TRANSPORTATION);
+      chEvtBroadcastFlags(&aos.events.os, AOS_SYSTEM_EVENTFLAGS_TRANSPORTATION);
       aosprintf("shutdown to transportation mode...\n");
       break;
     case AOS_SHUTDOWN_RESTART:
-      chEvtBroadcastFlags(&aos.events.os.source, AOS_SYSTEM_EVENTFLAGS_RESTART);
+      chEvtBroadcastFlags(&aos.events.os, AOS_SYSTEM_EVENTFLAGS_RESTART);
       aosprintf("restarting system...\n");
       break;
    // must never occur
@@ -961,7 +902,7 @@ void aosSysShutdownInit(aos_shutdown_t shutdown)
   }
 
   // update the system SSSP stage
-  aos.ssspStage = AOS_SSSP_SHUTDOWN_1_2;
+  aos.sssp.stage = AOS_SSSP_SHUTDOWN_1_2;
 
   return;
 }
@@ -972,7 +913,7 @@ void aosSysShutdownInit(aos_shutdown_t shutdown)
 void aosSysStop(void)
 {
 #if (AMIROOS_CFG_SHELL_ENABLE == true)
-  chThdWait(aos.shell->thread);
+  chThdWait(aos.shell.thread);
 #endif
 
   return;
@@ -1003,7 +944,7 @@ void aosSysShutdownFinal(EXTDriver* extDrv, aos_shutdown_t shutdown)
   extStop(extDrv);
 
   // update the system SSSP stage
-  aos.ssspStage = AOS_SSSP_SHUTDOWN_1_3;
+  aos.sssp.stage = AOS_SSSP_SHUTDOWN_1_3;
 
   // call bootloader callback depending on arguments
   switch (shutdown) {

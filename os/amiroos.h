@@ -54,20 +54,24 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 /** @} */
 
-/* core headers */
+/* subsystems headers */
 #include <aosconf.h>
 #include <hal.h>
+#if defined(HAL_USE_QEI) && (HAL_USE_QEI == TRUE)
 #include <hal_qei.h>
+#endif
 #include <ch.h>
 
+/* configuration check */
 #if !defined(_AMIRO_OS_CFG_)
 #error "invalid AMiRo-OS configuration file"
 #endif
 #if (_AMIRO_OS_CFG_VERSION_MAJOR_ != AMIROOS_VERSION_MAJOR) || (_AMIRO_OS_CFG_VERSION_MINOR_ < AMIROOS_VERSION_MINOR)
 #error "incompatible AMiRo-OS configuration file"
 #endif
-
 #include "core/inc/aos_confcheck.h"
+
+/* core headers */
 #include "core/inc/aos_debug.h"
 #include <core/inc/aos_iostream.h>
 #include "core/inc/aos_shell.h"

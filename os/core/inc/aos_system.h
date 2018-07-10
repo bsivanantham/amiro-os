@@ -103,10 +103,16 @@ typedef enum aos_ssspstage {
  * @brief   AMiRo-OS base system structure.
  */
 typedef struct aos_system {
+
   /**
-   * @brief   Current SSSP stage of the system.
+   * @brief   SSSP relevant data.
    */
-  aos_ssspstage_t ssspStage;
+  struct {
+    /**
+     * @brief   Current SSSP stage of the system.
+     */
+    aos_ssspstage_t stage;
+  } sssp;
 
   /**
    * @brief   System I/O stream.
@@ -119,41 +125,21 @@ typedef struct aos_system {
   struct {
 
     /**
-     * @brief   I/O related events.
+     * @brief   I/O event source.
      */
-    struct {
-      /**
-       * @brief   I/O event source.
-       */
-      event_source_t source;
-
-      /**
-       * @brief   Event flags emitted when a PD signal interrupt occurs.
-       */
-      eventflags_t flagsSignalPd;
-
-      /**
-       * @brief   Event flags emitted when a Sync signal interrupt occurs.
-       */
-      eventflags_t flagsSignalSync;
-    } io;
+    event_source_t io;
 
     /**
-     * @brief   Operating system events.
+     * @brief   OS event source.
      */
-    struct {
-      /**
-       * @brief   OS event source.
-       */
-      event_source_t source;
-    } os;
+    event_source_t os;
   } events;
 
 #if (AMIROOS_CFG_SHELL_ENABLE == true) || defined(__DOXYGEN__)
   /**
    * @brief   Pointer to the shell object.
    */
-  aos_shell_t* shell;
+  aos_shell_t shell;
 #endif
 
 } aos_system_t;
@@ -171,7 +157,11 @@ extern aos_system_t aos;
 #ifdef __cplusplus
 extern "C" {
 #endif
-  void aosSysInit(EXTDriver* extDrv, EXTConfig* extCfg, apalControlGpio_t* gpioPd, apalControlGpio_t* gpioSync, eventflags_t flagsSignalPd, eventflags_t evtFlagsSync, const char* shellPrompt);
+#if (AMIROOS_CFG_SHELL_ENABLE == true)
+  void aosSysInit(const char* shellPrompt);
+#else
+  void aosSysInit(void);
+#endif
   void aosSysStart(void);
   eventmask_t aosSysSsspStartupOsInitSyncCheck(event_listener_t* syncEvtListener);
   void aosSysGetUptimeX(aos_timestamp_t* ut);

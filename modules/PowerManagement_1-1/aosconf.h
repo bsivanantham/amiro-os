@@ -28,13 +28,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdbool.h>
 
-/*===========================================================================*/
-/**
- * @name Kernel parameters and options
- * @{
- */
-/*===========================================================================*/
-
 /*
  * Include an external configuration file to override the following default settings only if required.
  */
@@ -42,25 +35,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   #include <osconf.h>
 #endif
 
+/*===========================================================================*/
 /**
- * @brief   Flag to set the module as SSSP master.
+ * @name Kernel parameters and options
+ * @{
  */
-#if !defined(OS_CFG_SSSP_MASTER)
-  #define AMIROOS_CFG_SSSP_MASTER               true
-#else
-  #define AMIROOS_CFG_SSSP_MASTER               OS_CFG_SSSP_MASTER
-#endif
-
-/**
- * @brief   Time boundary for robot wide clock synchronization in microseconds.
- * @details Whenever the SSSP S (snychronization) signal gets logically deactivated,
- *          All modules need to align their local uptime to the nearest multiple of this value.
- */
-#if !defined(OS_CFG_SSSP_SYSSYNCPERIOD)
-  #define AMIROOS_CFG_SSSP_SYSSYNCPERIOD        1000000
-#else
-  #define AMIROOS_CFG_SSSP_SYSSYNCPERIOD        OS_CFG_SSSP_SYSSYNCPERIOD
-#endif
+/*===========================================================================*/
 
 /**
  * @brief   Flag to enable/disable debug API.
@@ -97,6 +77,36 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   #define AMIROOS_CFG_MAIN_LOOP_TIMEOUT         0
 #else
   #define AMIROOS_CFG_MAIN_LOOP_TIMEOUT         OS_CFG_MAIN_LOOP_TIMEOUT
+#endif
+
+/** @} */
+
+/*===========================================================================*/
+/**
+ * @name SSSP (Startup Shutdown Synchronization Protocol) configuration.
+ * @{
+ */
+/*===========================================================================*/
+
+/**
+ * @brief   Flag to set the module as SSSP master.
+ * @details There must be only one module with this flag set to true in a system.
+ */
+#if !defined(OS_CFG_SSSP_MASTER)
+  #define AMIROOS_CFG_SSSP_MASTER               true
+#else
+  #define AMIROOS_CFG_SSSP_MASTER               OS_CFG_SSSP_MASTER
+#endif
+
+/**
+ * @brief   Time boundary for robot wide clock synchronization in microseconds.
+ * @details Whenever the SSSP S (snychronization) signal gets logically deactivated,
+ *          All modules need to align their local uptime to the nearest multiple of this value.
+ */
+#if !defined(OS_CFG_SSSP_SYSSYNCPERIOD)
+  #define AMIROOS_CFG_SSSP_SYSSYNCPERIOD        1000000
+#else
+  #define AMIROOS_CFG_SSSP_SYSSYNCPERIOD        OS_CFG_SSSP_SYSSYNCPERIOD
 #endif
 
 /** @} */

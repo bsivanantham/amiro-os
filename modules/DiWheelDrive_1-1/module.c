@@ -36,7 +36,7 @@ static void _moduleIsrCallback(EXTDriver* extp, expchannel_t channel) {
   (void)extp;
 
   chSysLockFromISR();
-  chEvtBroadcastFlagsI(&aos.events.io.source, (1 << channel));
+  chEvtBroadcastFlagsI(&aos.events.io, (1 << channel));
   chSysUnlockFromISR();
 
   return;
@@ -297,7 +297,21 @@ apalGpio_t moduleGpioSysWarmrst = {
  */
 /*===========================================================================*/
 
-apalControlGpio_t moduleSsspPd = {
+#if (AMIROOS_CFG_SHELL_ENABLE == true) || defined(__DOXYGEN__)
+const char* moduleShellPrompt = "DiWheelDrive";
+#endif
+
+/** @} */
+
+/*===========================================================================*/
+/**
+ * @name Startup Shutdown Synchronization Protocol (SSSP)
+ * @{
+ */
+/*===========================================================================*/
+
+
+apalControlGpio_t moduleSsspGpioPd = {
   /* GPIO */ &moduleGpioSysPd,
   /* meta */ {
     /* active state */ APAL_GPIO_ACTIVE_LOW,
@@ -306,7 +320,7 @@ apalControlGpio_t moduleSsspPd = {
   },
 };
 
-apalControlGpio_t moduleSsspSync = {
+apalControlGpio_t moduleSsspGpioSync = {
   /* GPIO */ &moduleGpioSysSync,
   /* meta */ {
     /* active state */ APAL_GPIO_ACTIVE_LOW,
@@ -314,8 +328,6 @@ apalControlGpio_t moduleSsspSync = {
     /* direction    */ APAL_GPIO_DIRECTION_BIDIRECTIONAL,
   },
 };
-
-const char* moduleShellPrompt = "DiWheelDrive";
 
 /** @} */
 
@@ -497,7 +509,7 @@ static int _utShellCmdCb_AlldHmc5883l(BaseSequentialStream* stream, int argc, ch
 }
 static ut_hmc5883ldata_t _utHmc5883lData = {
   /* HMC driver   */ &moduleLldCompass,
-  /* event source */ &aos.events.io.source,
+  /* event source */ &aos.events.io,
   /* event flags  */ (1 << MODULE_GPIO_EXTCHANNEL_COMPASSDRDY),
   /* timeout      */ MICROSECONDS_PER_SECOND,
 };
@@ -553,7 +565,7 @@ static int _utShellCmdCb_AlldL3g4200d(BaseSequentialStream* stream, int argc, ch
 static ut_l3g4200ddata_t _utL3g4200dData = {
   /* driver            */ &moduleLldGyroscope,
   /* SPI configuration */ &moduleHalSpiGyroscopeConfig,
-  /* event source */ &aos.events.io.source,
+  /* event source */ &aos.events.io,
   /* event flags  */ (1 << MODULE_GPIO_EXTCHANNEL_GYRODRDY),
 };
 aos_unittest_t moduleUtAlldL3g4200d = {
@@ -602,7 +614,7 @@ static int _utShellCmdCb_AlldLis331dlh(BaseSequentialStream* stream, int argc, c
 static ut_lis331dlhdata_t _utLis331dlhData = {
   /* driver            */ &moduleLldAccelerometer,
   /* SPI configuration */ &moduleHalSpiAccelerometerConfig,
-  /* event source */ &aos.events.io.source,
+  /* event source */ &aos.events.io,
   /* event flags  */ (1 << MODULE_GPIO_EXTCHANNEL_ACCELINT),
 };
 aos_unittest_t moduleUtAlldLis331dlh = {
@@ -758,7 +770,7 @@ static int _utShellCmdCb_AlldVcnl4020(BaseSequentialStream* stream, int argc, ch
 static ut_vcnl4020data_t _utVcnl4020Data = {
   /* driver       */ &moduleLldProximity,
   /* timeout      */ MICROSECONDS_PER_SECOND,
-  /* event source */ &aos.events.io.source,
+  /* event source */ &aos.events.io,
   /* event flags  */ (1 << MODULE_GPIO_EXTCHANNEL_IRINT),
 };
 aos_unittest_t moduleUtAlldVcnl4020 = {

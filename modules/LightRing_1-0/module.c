@@ -36,7 +36,7 @@ static void _moduleIsrCallback(EXTDriver* extp, expchannel_t channel) {
   (void)extp;
 
   chSysLockFromISR();
-  chEvtBroadcastFlagsI(&aos.events.io.source, (1 << channel));
+  chEvtBroadcastFlagsI(&aos.events.io, (1 << channel));
   chSysUnlockFromISR();
 
   return;
@@ -219,7 +219,20 @@ apalGpio_t moduleGpioSysSync = {
  */
 /*===========================================================================*/
 
-apalControlGpio_t moduleSsspPd = {
+#if (AMIROOS_CFG_SHELL_ENABLE == true) || defined(__DOXYGEN__)
+const char* moduleShellPrompt = "LightRing";
+#endif
+
+/** @} */
+
+/*===========================================================================*/
+/**
+ * @name Startup Shutdown Synchronization Protocol (SSSP)
+ * @{
+ */
+/*===========================================================================*/
+
+apalControlGpio_t moduleSsspGpioPd = {
   /* GPIO */ &moduleGpioSysPd,
   /* meta */ {
     /* active state */ APAL_GPIO_ACTIVE_LOW,
@@ -228,7 +241,7 @@ apalControlGpio_t moduleSsspPd = {
   },
 };
 
-apalControlGpio_t moduleSsspSync = {
+apalControlGpio_t moduleSsspGpioSync = {
   /* GPIO */ &moduleGpioSysSync,
   /* meta */ {
     /* active state */ APAL_GPIO_ACTIVE_LOW,
@@ -236,8 +249,6 @@ apalControlGpio_t moduleSsspSync = {
     /* direction    */ APAL_GPIO_DIRECTION_BIDIRECTIONAL,
   },
 };
-
-const char* moduleShellPrompt = "LightRing";
 
 /** @} */
 

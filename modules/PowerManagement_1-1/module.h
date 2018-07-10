@@ -422,39 +422,31 @@ extern apalGpio_t moduleGpioChargeEn2;
  */
 #define MODULE_OS_IOEVENTFLAGS_SYSUARTUP        ((eventflags_t)1 << MODULE_GPIO_EXTCHANNEL_SYSUARTUP)
 
-/**
- * @brief   PD signal for SSSP.
- */
-extern apalControlGpio_t moduleSsspPd;
-
-/**
- * @brief   SYNC signal for SSSP.
- */
-extern apalControlGpio_t moduleSsspSync;
-
+#if (AMIROOS_CFG_SHELL_ENABLE == true) || defined(__DOXYGEN__)
 /**
  * @brief   Shell prompt text.
  */
 extern const char* moduleShellPrompt;
+#endif
 
 /**
  * @brief   Unit test initialization hook.
  */
 #define MODULE_INIT_TESTS() {                                                 \
   /* add unit-test shell commands */                                          \
-  aosShellAddCommand(aos.shell, &moduleUtAdcVsys.shellcmd);                   \
-  aosShellAddCommand(aos.shell, &moduleUtAlldAt24c01bn.shellcmd);             \
-  aosShellAddCommand(aos.shell, &moduleUtAlldBq24103a.shellcmd);              \
-  aosShellAddCommand(aos.shell, &moduleUtAlldBq27500.shellcmd);               \
-  aosShellAddCommand(aos.shell, &moduleUtAlldBq27500Bq24103a.shellcmd);       \
-  aosShellAddCommand(aos.shell, &moduleUtAlldIna219.shellcmd);                \
-  aosShellAddCommand(aos.shell, &moduleUtAlldMpr121.shellcmd);                \
-  aosShellAddCommand(aos.shell, &moduleUtAlldPca9544a.shellcmd);              \
-  aosShellAddCommand(aos.shell, &moduleUtAlldPklcs1212e4001.shellcmd);        \
-  aosShellAddCommand(aos.shell, &moduleUtAlldLed.shellcmd);                   \
-  aosShellAddCommand(aos.shell, &moduleUtAlldTps62113.shellcmd);              \
-  aosShellAddCommand(aos.shell, &moduleUtAlldTps62113Ina219.shellcmd);        \
-  aosShellAddCommand(aos.shell, &moduleUtAlldVcnl4020.shellcmd);              \
+  aosShellAddCommand(&aos.shell, &moduleUtAdcVsys.shellcmd);                  \
+  aosShellAddCommand(&aos.shell, &moduleUtAlldAt24c01bn.shellcmd);            \
+  aosShellAddCommand(&aos.shell, &moduleUtAlldBq24103a.shellcmd);             \
+  aosShellAddCommand(&aos.shell, &moduleUtAlldBq27500.shellcmd);              \
+  aosShellAddCommand(&aos.shell, &moduleUtAlldBq27500Bq24103a.shellcmd);      \
+  aosShellAddCommand(&aos.shell, &moduleUtAlldIna219.shellcmd);               \
+  aosShellAddCommand(&aos.shell, &moduleUtAlldMpr121.shellcmd);               \
+  aosShellAddCommand(&aos.shell, &moduleUtAlldPca9544a.shellcmd);             \
+  aosShellAddCommand(&aos.shell, &moduleUtAlldPklcs1212e4001.shellcmd);       \
+  aosShellAddCommand(&aos.shell, &moduleUtAlldLed.shellcmd);                  \
+  aosShellAddCommand(&aos.shell, &moduleUtAlldTps62113.shellcmd);             \
+  aosShellAddCommand(&aos.shell, &moduleUtAlldTps62113Ina219.shellcmd);       \
+  aosShellAddCommand(&aos.shell, &moduleUtAlldVcnl4020.shellcmd);             \
 }
 
 /**
@@ -489,15 +481,6 @@ extern const char* moduleShellPrompt;
 }
 
 /**
- * @brief   Hook to handle IO events during SSSP startup synchronization.
- */
-#define MODULE_SSP_STARTUP_OUTRO_IO_EVENT(mask, flags) {                      \
-  /* ignore all events */                                                     \
-  (void)mask;                                                                 \
-  (void)flags;                                                                \
-}
-
-/**
  * @brief   Periphery communication interface deinitialization hook.
  */
 #define MODULE_SHUTDOWN_PERIPHERY_COMM() {                                    \
@@ -509,6 +492,44 @@ extern const char* moduleShellPrompt;
   i2cStop(&MODULE_HAL_I2C_PROX_PM18_PM33_GAUGEREAR);                          \
   i2cStop(&MODULE_HAL_I2C_PROX_PM42_PM50_PMVDD_EEPROM_TOUCH_GAUGEFRONT);      \
   /* don't stop the serial driver so messages can still be printed */         \
+}
+
+/** @} */
+
+/*===========================================================================*/
+/**
+ * @name Startup Shutdown Synchronization Protocol (SSSP)
+ * @{
+ */
+/*===========================================================================*/
+
+/**
+ * @brief   PD signal GPIO.
+ */
+extern apalControlGpio_t moduleSsspGpioPd;
+
+/**
+ * @brief   SYNC signal GPIO.
+ */
+extern apalControlGpio_t moduleSsspGpioSync;
+
+/**
+ * @brief   Event flags for PD signal events.
+ */
+#define MODULE_SSSP_EVENTFLAGS_PD               MODULE_OS_IOEVENTFLAGS_SYSPD
+
+/**
+ * @brief   Event flags for Sync signal events.
+ */
+#define MODULE_SSSP_EVENTFLAGS_SYNC             MODULE_OS_IOEVENTFLAGS_SYSSYNC
+
+/**
+ * @brief   Hook to handle IO events during SSSP startup synchronization.
+ */
+#define MODULE_SSSP_STARTUP_OSINIT_OUTRO_IOEVENT_HOOK(mask, flags) {          \
+  /* ignore all events */                                                     \
+  (void)mask;                                                                 \
+  (void)flags;                                                                \
 }
 
 /** @} */

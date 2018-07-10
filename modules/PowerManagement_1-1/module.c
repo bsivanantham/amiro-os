@@ -36,7 +36,7 @@ static void _moduleIsrCallback(EXTDriver* extp, expchannel_t channel) {
   (void)extp;
 
   chSysLockFromISR();
-  chEvtBroadcastFlagsI(&aos.events.io.source, (1 << channel));
+  chEvtBroadcastFlagsI(&aos.events.io, (1 << channel));
   chSysUnlockFromISR();
 
   return;
@@ -355,7 +355,20 @@ apalGpio_t moduleGpioChargeEn2 = {
  */
 /*===========================================================================*/
 
-apalControlGpio_t moduleSsspPd = {
+#if (AMIROOS_CFG_SHELL_ENABLE == true) || defined(__DOXYGEN__)
+const char* moduleShellPrompt = "PowerManagement";
+#endif
+
+/** @} */
+
+/*===========================================================================*/
+/**
+ * @name Startup Shutdown Synchronization Protocol (SSSP)
+ * @{
+ */
+/*===========================================================================*/
+
+apalControlGpio_t moduleSsspGpioPd = {
   /* GPIO */ &moduleGpioSysPd,
   /* meta */ {
     /* active state */ APAL_GPIO_ACTIVE_LOW,
@@ -364,7 +377,7 @@ apalControlGpio_t moduleSsspPd = {
   },
 };
 
-apalControlGpio_t moduleSsspSync = {
+apalControlGpio_t moduleSsspGpioSync = {
   /* GPIO */ &moduleGpioSysSync,
   /* meta */ {
     /* active state */ APAL_GPIO_ACTIVE_LOW,
@@ -372,8 +385,6 @@ apalControlGpio_t moduleSsspSync = {
     /* direction    */ APAL_GPIO_DIRECTION_BIDIRECTIONAL,
   },
 };
-
-const char* moduleShellPrompt = "PowerManagement";
 
 /** @} */
 
@@ -857,7 +868,7 @@ static int _utShellCmdCb_AlldMpr121(BaseSequentialStream* stream, int argc, char
 static ut_mpr121data_t _utAlldMpr121Data= {
   /* MPR121 driver  */ &moduleLldTouch,
   /* timeout        */ MICROSECONDS_PER_SECOND,
-  /* event source   */ &aos.events.io.source,
+  /* event source   */ &aos.events.io,
   /* event flags    */ (1 << MODULE_GPIO_EXTCHANNEL_TOUCHINT),
 };
 aos_unittest_t moduleUtAlldMpr121 = {
@@ -1119,7 +1130,7 @@ static int _utShellCmdCb_AlldVcnl4020(BaseSequentialStream* stream, int argc, ch
 static ut_vcnl4020data_t _utAlldVcnl4020Data = {
   /* driver       */ NULL,
   /* timeout      */ MICROSECONDS_PER_SECOND,
-  /* event source */ &aos.events.io.source,
+  /* event source */ &aos.events.io,
   /* event flags  */ 0,
 };
 aos_unittest_t moduleUtAlldVcnl4020 = {
