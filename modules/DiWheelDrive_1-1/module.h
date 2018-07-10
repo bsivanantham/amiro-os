@@ -191,12 +191,12 @@ extern SPIConfig moduleHalSpiGyroscopeConfig;
 /**
  * @brief   Interrupt channel for the SYS_PD signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_SYSPD            ((expchannel_t)7)
+#define MODULE_GPIO_EXTCHANNEL_SYSPD            ((expchannel_t)8)
 
 /**
  * @brief   Interrupt channel for the SYS_REG_EN signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_SYSREGEN         ((expchannel_t)8)
+#define MODULE_GPIO_EXTCHANNEL_SYSREGEN         ((expchannel_t)9)
 
 /**
  * @brief   Interrupt channel for the IR_INT signal.
