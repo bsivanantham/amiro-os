@@ -454,7 +454,7 @@ function patchChibiOS {
     for patch in $patches; do
       cp $patch .
       patch=$(basename $patch)
-      git apply --whitespace=nowarn < $patch 2>&1 | tee -a $LOG_FILE
+      git apply --whitespace=nowarn --ignore-space-change --ignore-whitespace < $patch 2>&1 | tee -a $LOG_FILE
       rm $patch
 #      # These lines are disabled for safety reasons:
 #      #   Filed commits are detected as valid changes by the super-project.
