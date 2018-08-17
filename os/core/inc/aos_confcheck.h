@@ -49,6 +49,25 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   #error "AMIROOS_CFG_SSSP_MASTER not defined in aosconf.h"
 #endif
 
+#ifndef AMIROOS_CFG_SSSP_STACK_START
+  #error "AMIROOS_CFG_SSSP_STACK_START not defined in aosconf.h"
+#endif
+
+#ifndef AMIROOS_CFG_SSSP_STACK_END
+  #error "AMIROOS_CFG_SSSP_STACK_END not defined in aosconf.h"
+#endif
+
+#if (AMIROOS_CFG_SSSP_STACK_START == true) && (AMIROOS_CFG_SSSP_STACK_END == true)
+  #warning "AMIROOS_CFG_SSSP_STACK_START and AMIROOS_CFG_SSSP_STACK_END both enabled in aosconf.h"
+  #if (AMIROOS_CFG_SSSP_MASTER != true)
+    #error "AMIROOS_CFG_SSSP_MASTER must be enabled in this case"
+  #endif
+#endif
+
+#ifndef AMIROOS_CFG_SSSP_SIGNALDELAY
+  #error "AMIROOS_CFG_SSSP_SIGNALDELAY not defined in aosconf.h"
+#endif
+
 #ifndef AMIROOS_CFG_SSSP_SYSSYNCPERIOD
   #error "AMIROOS_CFG_SSSP_SYSSYNCPERIOD not defined in aosconf.h"
 #endif

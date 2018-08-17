@@ -277,19 +277,29 @@ extern apalControlGpio_t moduleSsspGpioPd;
 extern apalControlGpio_t moduleSsspGpioSync;
 
 /**
+ * @brief   DN signal GPIO.
+ */
+extern apalControlGpio_t moduleSsspGpioDn;
+
+/**
  * @brief   Event flags for PD signal events.
  */
 #define MODULE_SSSP_EVENTFLAGS_PD               MODULE_OS_IOEVENTFLAGS_SYSPD
 
 /**
- * @brief   Event flags for Sync signal events.
+ * @brief   Event flags for SYNC signal events.
  */
 #define MODULE_SSSP_EVENTFLAGS_SYNC             MODULE_OS_IOEVENTFLAGS_SYSSYNC
 
 /**
+ * @brief   Event flags for DN signal events.
+ */
+#define MODULE_SSSP_EVENTFLAGS_DN               MODULE_OS_IOEVENTFLAGS_SYSUARTDN
+
+/**
  * @brief   Hook to handle IO events during SSSP startup synchronization.
  */
-#define MODULE_SSSP_STARTUP_OSINIT_OUTRO_IOEVENT_HOOK(mask, flags) {          \
+#define MODULE_SSSP_STARTUP_2_2_IOEVENT_HOOK(mask, flags) {                   \
   /* ignore all events */                                                     \
   (void)mask;                                                                 \
   (void)flags;                                                                \

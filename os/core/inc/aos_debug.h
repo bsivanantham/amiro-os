@@ -54,6 +54,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   chDbgAssert(c, r);                                      \
 }
 
+/**
+ * @brief   Printf function for messages only printed in debug builds.
+ *
+ * @param[in] fmt   Formatted string to print.
+ */
+#define aosDbgPrintf(fmt, ...)           chprintf((BaseSequentialStream*)&aos.iostream, fmt, ##__VA_ARGS__)
+
 #else
 
 #define aosDbgCheck(c) {                                  \
@@ -67,6 +74,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define aosDbgAssertMsg(c, r) {                           \
   (void)(c);                                              \
   (void)(r);                                              \
+}
+
+#define aosDbgPrintf(fmt, ...) {                          \
+  (void)(fmt);                                            \
 }
 
 #endif

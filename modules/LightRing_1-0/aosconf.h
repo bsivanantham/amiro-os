@@ -99,6 +99,35 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #endif
 
 /**
+ * @brief   Flag to set the module to be the first in the stack.
+ * @details There must be only one module with this flag set to true in a system.
+ */
+#if !defined(OS_CFG_SSSP_STACK_START)
+  #define AMIROOS_CFG_SSSP_STACK_START          false
+#else
+  #define AMIROOS_CFG_SSSP_STACK_START          OS_CFG_SSSP_STACK_START
+#endif
+
+/**
+ * @brief   Flag to set the module to be the last in the stack.
+ * @details There must be only one module with this flag set to true in a system.
+ */
+#if !defined(OS_CFG_SSSP_STACK_END)
+  #define AMIROOS_CFG_SSSP_STACK_END            true
+#else
+  #define AMIROOS_CFG_SSSP_STACK_END            OS_CFG_SSSP_STACK_END
+#endif
+
+/**
+ * @brief   Delay time (in microseconds) how long a SSSP signal must be active.
+ */
+#if !defined(OS_CFG_SSSP_SIGNALDELAY)
+  #define AMIROOS_CFG_SSSP_SIGNALDELAY          1000
+#else
+  #define AMIROOS_CFG_SSSP_SIGNALDELAY          OS_CFG_SSSP_SIGNALDELAY
+#endif
+
+/**
  * @brief   Time boundary for robot wide clock synchronization in microseconds.
  * @details Whenever the SSSP S (snychronization) signal gets logically deactivated,
  *          All modules need to align their local uptime to the nearest multiple of this value.
@@ -121,7 +150,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /**
  * @brief   Shell enable flag.
  */
-#if (AMIROOS_CFG_TESTS_ENABLE == false) && !defined(OS_CFG_SHELL_ENABLE)
+#if (AMIROOS_CFG_TESTS_ENABLE != true) && !defined(OS_CFG_SHELL_ENABLE)
   #define AMIROOS_CFG_SHELL_ENABLE              true
 #elif (AMIROOS_CFG_TESTS_ENABLE == true)
   #define AMIROOS_CFG_SHELL_ENABLE              true

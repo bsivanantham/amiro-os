@@ -260,7 +260,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * PA9  - PROG_RX                   (alternate pushpull 50MHz)
  * PA10 - PROG_TX                   (input pullup)
  * PA11 - CAN_RX                    (input pullup)
- * PA12 - CAN_TX                    (input floating)
+ * PA12 - CAN_TX                    (alternate pushpull 50MHz)
  * PA13 - SWDIO                     (input pullup)
  * PA14 - SWCLK                     (input pullup)
  * PA15 - DRIVE_PWM2B               (alternate pushpull 50MHz)
@@ -277,7 +277,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                                      PIN_CR(GPIOA_PROG_RX, PIN_MODE_OUTPUT_50M, PIN_CNF_ALTERNATE_PUSHPULL) |      \
                                      PIN_CR(GPIOA_PROG_TX, PIN_MODE_INPUT, PIN_CNF_INPUT_PULLX) |                  \
                                      PIN_CR(GPIOA_CAN_RX, PIN_MODE_INPUT, PIN_CNF_INPUT_PULLX) |                   \
-                                     PIN_CR(GPIOA_CAN_TX, PIN_MODE_INPUT, PIN_CNF_INPUT_FLOATING) |                \
+                                     PIN_CR(GPIOA_CAN_TX, PIN_MODE_OUTPUT_50M, PIN_CNF_ALTERNATE_PUSHPULL) |       \
                                      PIN_CR(GPIOA_SWDIO, PIN_MODE_INPUT, PIN_CNF_INPUT_PULLX) |                    \
                                      PIN_CR(GPIOA_SWCLK, PIN_MODE_INPUT, PIN_CNF_INPUT_PULLX) |                    \
                                      PIN_CR(GPIOA_DRIVE_PWM2B, PIN_MODE_OUTPUT_50M, PIN_CNF_ALTERNATE_PUSHPULL))

@@ -37,6 +37,36 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define OSEVENT_MASK                            EVENT_MASK(1)
 
 /**
+ * @brief   Event mask to idetify CAN events.
+ */
+#define CANEVENT_MASK                           EVENT_MASK(2)
+
+/**
+ * @brief   Event mask to idetify timeout events.
+ */
+#define TIMEOUTEVENT_MASK                       EVENT_MASK(3)
+
+/**
+ * @brief   Event mask to idetify signal delay events.
+ */
+#define DELAYEVENT_MASK                         EVENT_MASK(4)
+
+/**
+ * @brief   CAN message identifier for initialization of the SSSP stack initialization sequence.
+ */
+#define SSSP_STACKINIT_CANMSGID_INIT            0x003
+
+/**
+ * @brief   CAN message identifier for transmitting module IDs during the SSSP stack initialization sequence.
+ */
+#define SSSP_STACKINIT_CANMSGID_MODULEID        0x002
+
+/**
+ * @brief   CAN message identifier for abortion of the SSSP stack initialization sequence.
+ */
+#define SSSP_STACKINIT_CANMSGID_ABORT           0x001
+
+/**
  * @brief   Listener object for I/O events.
  */
 static event_listener_t _eventListenerIO;
@@ -73,15 +103,657 @@ AMIROOS_CFG_MAIN_EXTRA_STATIC_VARIABLES
  * @param[in] mask    The event mask.
  * @param[in] flags   The event flags.
  */
-static inline void _unexpectedEventError(eventmask_t mask, eventflags_t flags)
+static inline void _unexpectedEventError(const eventmask_t mask, const eventflags_t flags)
 {
 #if (AMIROOS_CFG_DBG == true)
   aosprintf("unexpected/unknown event received. mask: 0x%08X; flags: 0x%08X\n", mask, flags);
 #else
-  (void)mask;
-  (void)flags;
+  (void)(mask);
+  (void)(flags);
 #endif
+}
+
+/**
+ * @brief   Callback function to be used during SSSP stack initialization sequence.
+ *
+ * @param[in] par   A pointer to an @p event_source_t to be fired.
+ */
+static void _ssspTimerCallback(void* par)
+{
+  aosDbgCheck(par != NULL);
+
+  chSysLockFromISR();
+  chEvtBroadcastI((event_source_t*)par);
+  chSysUnlockFromISR();
+
   return;
+}
+
+/**
+ * @brief   Helper function to serialize 32 bit data.
+ *
+ * @param[out]  dst   Pointer to the output buffer.
+ * @param[in]   src   32 bit data to be serielized.
+ */
+inline void _canSerialize32(uint8_t* dst, const uint32_t src)
+{
+  aosDbgCheck(dst != NULL);
+
+  for (uint8_t byte = 0; byte < 4; ++byte) {
+    dst[byte] = (uint8_t)((src >> (byte * 8)) & 0xFF);
+  }
+
+  return;
+}
+
+/**
+ * @brief   Helper function to deserialize 32 bit data.
+ *
+ * @param[in] src   Pointer to the buffer of data to be deserialzed.
+ *
+ * @return    The deserialized 32 bit data.
+ */
+inline uint32_t _canDeserialize32(uint8_t* src)
+{
+  aosDbgCheck(src != NULL);
+
+  return ((uint32_t)src[0]) | (((uint32_t)src[1]) << 8) | (((uint32_t)src[2]) << 16) | (((uint32_t)src[3]) << 24);
+}
+
+/**
+ * @brief   Implementation of the SSSP module stack initialization sequence (startup phase 3).
+ *
+ * @return Shutdown value.
+ * @retval AOS_SHUTDOWN_NONE      No shutdown signal received
+ * @retval AOS_SHUTDOWN_PASSIVE   Shutdown signal received.
+ */
+aos_shutdown_t _ssspModuleStackInitialization(void)
+{
+  // local types
+  /**
+   * @brief   States for the internal state machine to implement SSSP startup stage 3.
+   */
+  typedef enum {
+    STAGE_3_1,                  /**< Initiation of SSSP startup stage 3. */
+    STAGE_3_2,                  /**< Starting the sequence and broadcasting the first ID. */
+    STAGE_3_3_WAITFORFIRSTID,   /**< Waiting for first ID after initiation. */
+    STAGE_3_3_WAITFORIDORSIG,   /**< Waiting for next ID or activation of neighbor signal. */
+    STAGE_3_3_WAITFORID,        /**< Waiting for next ID (after the module has set its own ID). */
+    STAGE_3_4_FINISH,           /**< Successful finish of stage 3. */
+    STAGE_3_4_ABORT_ACTIVE,     /**< Aborting stage 3 (active). */
+    STAGE_3_4_ABORT,            /**< Aborting stage 3 (passive). */
+  } sssp_modulestackinitstage_t;
+
+  typedef struct {
+    bool loop     : 1;
+    bool wfe      : 1;
+    bool wfe_next : 1;
+  } flags_t;
+
+  // local variables
+  aos_shutdown_t shutdown = AOS_SHUTDOWN_NONE;
+  sssp_modulestackinitstage_t stage = STAGE_3_1;
+  eventmask_t eventmask = 0;
+  eventflags_t ioflags;
+  event_source_t eventSourceTimeout;
+  event_source_t eventSourceDelay;
+  event_listener_t eventListenerTimeout;
+  event_listener_t eventListenerDelay;
+  event_listener_t eventListenerCan;
+  virtual_timer_t timerTimeout;
+  virtual_timer_t timerDelay;
+  CANTxFrame canTxFrame;
+  CANRxFrame canRxFrame;
+#if (AMIROOS_CFG_SSSP_STACK_START != true) || (AMIROOS_CFG_DBG == true)
+  aos_ssspmoduleid_t lastid = 0;
+#endif
+  flags_t flags;
+
+  // initialize local varibles
+  chEvtObjectInit(&eventSourceTimeout);
+  chEvtObjectInit(&eventSourceDelay);
+  chVTObjectInit(&timerTimeout);
+  chVTObjectInit(&timerDelay);
+  canTxFrame.RTR = CAN_RTR_DATA;
+  canTxFrame.IDE = CAN_IDE_STD;
+  flags.loop = true;
+  flags.wfe = false; // do not wait for events in the initial iteration of the FSM loop
+  flags.wfe_next = true;
+
+  // initialize system variables
+  aos.sssp.stage = AOS_SSSP_STARTUP_3_1;
+  aos.sssp.moduleId = 0;
+
+  // listen to events (timout, delay, CAN receive)
+  chEvtRegisterMask(&eventSourceTimeout, &eventListenerTimeout, TIMEOUTEVENT_MASK);
+  chEvtRegisterMask(&eventSourceDelay, &eventListenerDelay, DELAYEVENT_MASK);
+  chEvtRegisterMask(&MODULE_HAL_CAN.rxfull_event, &eventListenerCan, CANEVENT_MASK);
+
+  /*
+   * FSM in a loop.
+   *
+   * This is a fully event-based FSM for the module stack initialization
+   * sequence, defined by SSSP as startup stage 3. There are five different
+   * events that can occur at this point:
+   *  I/O events: The input level of an input pin has changed. Such events must
+   *              be handled differently depending on the current state. Most
+   *              of the time, however, such events can be ignored.
+   *  OS events:  Such events are only available after this stage completed and
+   *              thus should never occur. However, there is an optional hook
+   *              to handle such events, nevertheless.
+   *  CAN events: At least one CAN message was received. Note that this event
+   *              will only fire again if all input buffers have been cleared.
+   *  timeouts:   If some module does not support the sequence of there is any
+   *              issue, such a case is detected via timeouts and must be
+   *              handled accordingly (see abort state). In some cases, it is
+   *              possible that a timeout event occurres 'simultaneously' with
+   *              some other event. This can be caused by several timing issues
+   *              and is a valid situation. As a result, any other events
+   *              should be handled before the timeout event. If the other
+   *              events are expected and valid, this implementation requires
+   *              the timeout event flag to be cleared explicitely. Otherwise
+   *              it is evaluated at the end of each iteration of the loop.
+   *  delays:     Depending on the current state, delays are required by SSSP
+   *              for timing of the sequential activation of signals.
+   */
+  aosDbgPrintf("SSSP stack initialization sequence:\n");
+  while (flags.loop) {
+#if (AMIROOS_CFG_DBG == true)
+    switch (stage) {
+      case STAGE_3_1:
+        aosDbgPrintf(">>> 3-1\n");
+        break;
+      case STAGE_3_2:
+        aosDbgPrintf(">>> 3-2\n");
+        break;
+      case STAGE_3_3_WAITFORFIRSTID:
+        aosDbgPrintf(">>> 3-3 (1st ID)\n");
+        break;
+      case STAGE_3_3_WAITFORIDORSIG:
+        aosDbgPrintf(">>> 3-3 (ID/sig)\n");
+        break;
+      case STAGE_3_3_WAITFORID:
+        aosDbgPrintf(">>> 3-3 (ID)\n");
+        break;
+      case STAGE_3_4_FINISH:
+        aosDbgPrintf(">>> 3-4 (finish)\n");
+        break;
+      case STAGE_3_4_ABORT_ACTIVE:
+        aosDbgPrintf(">>> 3-4 (avtive abort)\n");
+        break;
+      case STAGE_3_4_ABORT:
+        aosDbgPrintf(">>> 3-4 (abort)\n");
+        break;
+    }
+#endif
+
+    // reset wfe flag for the next iteration
+    flags.wfe_next = true;
+
+    // waiting for events may be skipped
+    if (flags.wfe) {
+      // wait for any event to occur
+      aosDbgPrintf("WFE...");
+      eventmask = chEvtWaitAnyTimeout(ALL_EVENTS, LL_US2ST(AOS_SYSTEM_SSSP_TIMEOUT));
+      aosDbgPrintf("\t0x%08X", eventmask);
+    } else {
+      aosDbgPrintf("WFE skipped");
+    }
+    aos_timestamp_t uptime;
+    aosSysGetUptime(&uptime);
+    aosDbgPrintf("\t%04ums\n", (uint32_t)(uptime / 1000));
+
+    /*
+     * execute some general tasks and high priority events
+     */
+    // no event occurred at all
+    if ((flags.wfe) && (eventmask == 0)) {
+      aosDbgPrintf("ERR: no evt\n");
+      // enforce timeout event
+      chEvtBroadcast(&eventSourceTimeout);
+      continue;
+    }
+    // if an IO event occurred
+    if (eventmask & IOEVENT_MASK) {
+      ioflags = chEvtGetAndClearFlags(&_eventListenerIO);
+      aosDbgPrintf("INFO: IO evt (0x%08X)\n", ioflags);
+      // a power-down event occurred
+      if (ioflags & MODULE_SSSP_EVENTFLAGS_PD) {
+        aosDbgPrintf("PD evt\n");
+        // deactivate S and UP
+        apalControlGpioSet(&moduleSsspGpioSync, APAL_GPIO_OFF);
+  #if (AMIROOS_CFG_SSSP_STACK_END != true)
+        apalControlGpioSet(&moduleSsspGpioUp, APAL_GPIO_OFF);
+  #endif
+        // set shutdown flag and exit the loop
+        shutdown = AOS_SHUTDOWN_PASSIVE;
+        break;
+      }
+      // the S signal was deactivated
+      if (ioflags & MODULE_SSSP_EVENTFLAGS_SYNC) {
+        apalControlGpioState_t sstate;
+        apalControlGpioGet(&moduleSsspGpioSync, &sstate);
+        if (sstate == APAL_GPIO_OFF) {
+          aosDbgPrintf("-S evt\n");
+          // either finish or abort
+          if ((stage == STAGE_3_3_WAITFORID) && (aos.sssp.moduleId != 0)) {
+            stage = STAGE_3_4_FINISH;
+          } else if (stage != STAGE_3_4_ABORT) {
+            stage = STAGE_3_4_ABORT_ACTIVE;
+          }
+        }
+      }
+    }
+    // an OS event occurred
+    if (eventmask & OSEVENT_MASK) {
+      aosDbgPrintf("WARN: OS evt\n");
+      // get the flags
+      eventflags_t oseventflags = chEvtGetAndClearFlags(&_eventListenerOS);
+      // there should be no OS events at this point
+#ifdef MODULE_SSSP_STARTUP_3_OSEVENT_HOOK
+      MODULE_SSSP_STARTUP_3_OSEVENT_HOOK(eventmask, eventflags);
+#else
+      _unexpectedEventError(eventmask, oseventflags);
+#endif
+    }
+    // if a CAN event occurred
+    if ((eventmask & CANEVENT_MASK)) {
+      // fetch message
+      if (flags.wfe) {
+        canReceiveTimeout(&MODULE_HAL_CAN, CAN_ANY_MAILBOX, &canRxFrame, TIME_IMMEDIATE);
+        aosDbgPrintf("CAN <- 0x%03X\n", canRxFrame.SID);
+      }
+      // identify and handle abort messgaes
+      if (canRxFrame.SID == SSSP_STACKINIT_CANMSGID_ABORT) {
+        stage = STAGE_3_4_ABORT;
+      }
+      // warn if a unexpected message was received
+      else if ((canRxFrame.SID != SSSP_STACKINIT_CANMSGID_INIT) &&
+               (canRxFrame.SID != SSSP_STACKINIT_CANMSGID_MODULEID)) {
+        aosDbgPrintf("WARN: unknown msg\n");
+      }
+      // any further pending messages are fetched at the end of the loop
+    }
+    // if a timeout event occurred
+    if (eventmask & TIMEOUTEVENT_MASK) {
+      // is handled at the end of the loop (or must be cleared by FSM)
+    }
+    // if a delay event occurred
+    if (eventmask & DELAYEVENT_MASK) {
+      // is handled by FSM
+    }
+
+    /*
+     * this is the actual FSM
+     */
+    switch (stage) {
+      case STAGE_3_1:
+      {
+        aos.sssp.stage = AOS_SSSP_STARTUP_3_1;
+
+        // there was no event at all (skipped wfe)
+        if (eventmask == 0 && flags.wfe == false) {
+#if (AMIROOS_CFG_SSSP_MASTER == true)
+          // initialize the stage by transmitting an according CAN message
+          aosDbgPrintf("CAN -> init\n");
+          canTxFrame.DLC = 0;
+          canTxFrame.SID = SSSP_STACKINIT_CANMSGID_INIT;
+          if (canTransmitTimeout(&MODULE_HAL_CAN, CAN_ANY_MAILBOX, &canTxFrame, TIME_IMMEDIATE) != MSG_OK) {
+            chEvtBroadcast(&eventSourceTimeout);
+            break;
+          }
+          // activate S
+          aosDbgPrintf("S+\n");
+          apalControlGpioSet(&moduleSsspGpioSync, APAL_GPIO_ON);
+#if (AMIROOS_CFG_SSSP_STACK_START == true)
+          // proceed immediately
+          stage = STAGE_3_2;
+          flags.wfe_next = false;
+#else
+          // set the timeout timer
+          chVTSet(&timerTimeout, LL_US2ST(AOS_SYSTEM_SSSP_TIMEOUT), _ssspTimerCallback, &eventSourceTimeout);
+          // proceed
+          stage = STAGE_3_3_WAITFORFIRSTID;
+#endif
+#else
+          // set the timeout timer
+          chVTSet(&timerTimeout, LL_US2ST(AOS_SYSTEM_SSSP_TIMEOUT), _ssspTimerCallback, &eventSourceTimeout);
+#endif
+        }
+
+#if (AMIROOS_CFG_SSSP_MASTER != true)
+        // a CAN message was received
+        else if (eventmask & CANEVENT_MASK) {
+          // if an initiation message was received
+          if (canRxFrame.DLC == 0 &&
+              canRxFrame.RTR == CAN_RTR_DATA &&
+              canRxFrame.IDE == CAN_IDE_STD &&
+              canRxFrame.SID == SSSP_STACKINIT_CANMSGID_INIT) {
+            aosDbgPrintf("init msg\n");
+            // reset the timeout timer and clear pending flags
+            chVTReset(&timerTimeout);
+            chEvtWaitAnyTimeout(TIMEOUTEVENT_MASK, TIME_IMMEDIATE);
+            eventmask &= ~TIMEOUTEVENT_MASK;
+            // activate S
+            aosDbgPrintf("S+\n");
+            apalControlGpioSet(&moduleSsspGpioSync, APAL_GPIO_ON);
+#if (AMIROOS_CFG_SSSP_STACK_START == true)
+            // proceed
+            stage = STAGE_3_2;
+            flags.wfe_next = false;
+#else
+            // set the timeout timer
+            chVTSet(&timerTimeout, LL_US2ST(AOS_SYSTEM_SSSP_TIMEOUT), _ssspTimerCallback, &eventSourceTimeout);
+            // proceed
+            stage = STAGE_3_3_WAITFORFIRSTID;
+#endif
+          }
+        }
+#endif
+
+        break;
+      } /* end of STAGE_3_1 */
+
+      case STAGE_3_2:
+      {
+#if (AMIROOS_CFG_SSSP_STACK_START == true)
+        aos.sssp.stage = AOS_SSSP_STARTUP_3_2;
+
+        // if this stage was just entered
+        if (flags.wfe == false) {
+          // set the module ID
+          aos.sssp.moduleId = 1;
+          // broadcast module ID
+          aosDbgPrintf("CAN -> ID (%u)\n", aos.sssp.moduleId);
+          canTxFrame.DLC = 4;
+          canTxFrame.SID = SSSP_STACKINIT_CANMSGID_MODULEID;
+          _canSerialize32(canTxFrame.data8, aos.sssp.moduleId);
+          if (canTransmitTimeout(&MODULE_HAL_CAN, CAN_ANY_MAILBOX, &canTxFrame, TIME_IMMEDIATE) != MSG_OK) {
+            chEvtBroadcast(&eventSourceTimeout);
+            break;
+          }
+#if (AMIROOS_CFG_SSSP_STACK_START != true) || (AMIROOS_CFG_DBG == true)
+          lastid = aos.sssp.moduleId;
+#endif
+#if (AMIROOS_CFG_SSSP_STACK_END == true)
+          // sequence is already over
+          // deactivate S
+          aosDbgPrintf("S-\n");
+          apalControlGpioSet(&moduleSsspGpioSync, APAL_GPIO_OFF);
+          // proceed
+          stage = STAGE_3_3_WAITFORID;
+#else
+          // set the delay timer so the UP signal is activated later
+          chVTSet(&timerDelay, LL_US2ST(AMIROOS_CFG_SSSP_SIGNALDELAY), _ssspTimerCallback, &eventSourceDelay);
+#endif
+        }
+
+        // if a delay event occurred
+        if (eventmask & DELAYEVENT_MASK) {
+          // activate UP
+          aosDbgPrintf("UP+\n");
+          apalControlGpioSet(&moduleSsspGpioUp, APAL_GPIO_ON);
+          // deactivate S
+          aosDbgPrintf("S-\n");
+          apalControlGpioSet(&moduleSsspGpioSync, APAL_GPIO_OFF);
+          // explicitely clear timeout event flag
+          chEvtWaitAnyTimeout(TIMEOUTEVENT_MASK, TIME_IMMEDIATE);
+          eventmask &= ~TIMEOUTEVENT_MASK;
+          // proceed
+          stage = STAGE_3_3_WAITFORID;
+        }
+#endif
+
+        break;
+      } /* end of STAGE_3_2 */
+
+      case STAGE_3_3_WAITFORFIRSTID:
+      {
+#if (AMIROOS_CFG_SSSP_STACK_START != true)
+        aos.sssp.stage = AOS_SSSP_STARTUP_3_3;
+
+        // a CAN message was received
+        if (eventmask & CANEVENT_MASK) {
+          // if an ID message was received
+          if (canRxFrame.DLC == 4 &&
+              canRxFrame.RTR == CAN_RTR_DATA &&
+              canRxFrame.IDE == CAN_IDE_STD &&
+              canRxFrame.SID == SSSP_STACKINIT_CANMSGID_MODULEID) {
+            aosDbgPrintf("ID (%u)\n", _canDeserialize32(canRxFrame.data8));
+            // validate received ID
+            if (lastid < _canDeserialize32(canRxFrame.data8)) {
+              // store received ID
+              lastid = _canDeserialize32(canRxFrame.data8);
+              // restart timeout timer
+              chVTSet(&timerTimeout, LL_US2ST(AOS_SYSTEM_SSSP_TIMEOUT), _ssspTimerCallback, &eventSourceTimeout);
+              // proceed
+              stage = STAGE_3_3_WAITFORIDORSIG;
+            } else {
+              aosDbgPrintf("ERR: invalid ID\n");
+              // abort
+              stage = STAGE_3_4_ABORT_ACTIVE;
+              flags.wfe_next = false;
+            }
+            // explicitely clear timeout event flag
+            chEvtWaitAnyTimeout(TIMEOUTEVENT_MASK, TIME_IMMEDIATE);
+            eventmask &= ~TIMEOUTEVENT_MASK;
+          }
+        }
+#endif
+        break;
+      } /* end of STAGE_3_3_WAITFORFIRSTID */
+
+      case STAGE_3_3_WAITFORIDORSIG:
+      {
+#if (AMIROOS_CFG_SSSP_STACK_START != true)
+        aos.sssp.stage = AOS_SSSP_STARTUP_3_3;
+
+        // a CAN message was received
+        if (eventmask & CANEVENT_MASK) {
+          // if an ID message was received
+          if (canRxFrame.DLC == 4 &&
+              canRxFrame.RTR == CAN_RTR_DATA &&
+              canRxFrame.IDE == CAN_IDE_STD &&
+              canRxFrame.SID == SSSP_STACKINIT_CANMSGID_MODULEID) {
+            aosDbgPrintf("ID (%u)\n", _canDeserialize32(canRxFrame.data8));
+            // validate received ID
+            if (lastid < _canDeserialize32(canRxFrame.data8)) {
+              // store received ID
+              lastid = _canDeserialize32(canRxFrame.data8);
+              // restart timeout timer
+              chVTSet(&timerTimeout, LL_US2ST(AOS_SYSTEM_SSSP_TIMEOUT), _ssspTimerCallback, &eventSourceTimeout);
+            } else {
+              aosDbgPrintf("ERR: invalid ID\n");
+              // abort
+              stage = STAGE_3_4_ABORT_ACTIVE;
+              flags.wfe_next = false;
+            }
+            // explicitely clear timeout event flag
+            chEvtWaitAnyTimeout(TIMEOUTEVENT_MASK, TIME_IMMEDIATE);
+            eventmask &= ~TIMEOUTEVENT_MASK;
+          }
+        }
+
+        // if an IO event was received (DN signal)
+        if ((eventmask & IOEVENT_MASK) && (ioflags & MODULE_SSSP_EVENTFLAGS_DN)) {
+          aosDbgPrintf("DN <-\n");
+          // reset timeout timer
+          chVTReset(&timerTimeout);
+          chEvtWaitAnyTimeout(TIMEOUTEVENT_MASK, TIME_IMMEDIATE);
+          eventmask &= ~TIMEOUTEVENT_MASK;
+          // increment and broadcast ID
+          aos.sssp.moduleId = lastid + 1;
+          aosDbgPrintf("CAN -> ID (%u)\n", aos.sssp.moduleId);
+          canTxFrame.DLC = 4;
+          canTxFrame.SID = SSSP_STACKINIT_CANMSGID_MODULEID;
+          _canSerialize32(canTxFrame.data8, aos.sssp.moduleId);
+          if (canTransmitTimeout(&MODULE_HAL_CAN, CAN_ANY_MAILBOX, &canTxFrame, TIME_IMMEDIATE) != MSG_OK) {
+            chEvtBroadcast(&eventSourceTimeout);
+            break;
+          }
+          // set delay timer
+          chVTSet(&timerDelay, LL_US2ST(AMIROOS_CFG_SSSP_SIGNALDELAY), _ssspTimerCallback, &eventSourceDelay);
+        }
+
+        // if a delay event occurred
+        if (eventmask & DELAYEVENT_MASK) {
+#if (AMIROOS_CFG_SSSP_STACK_END != true)
+          // activate UP
+          aosDbgPrintf("UP+\n");
+          apalControlGpioSet(&moduleSsspGpioUp, APAL_GPIO_ON);
+#endif
+          // deactivate S
+          aosDbgPrintf("S-\n");
+          apalControlGpioSet(&moduleSsspGpioSync, APAL_GPIO_OFF);
+          // reset the timeout timer
+          chVTSet(&timerTimeout, LL_US2ST(AOS_SYSTEM_SSSP_TIMEOUT), _ssspTimerCallback, &eventSourceTimeout);
+          chEvtWaitAnyTimeout(TIMEOUTEVENT_MASK, TIME_IMMEDIATE);
+          eventmask &= ~TIMEOUTEVENT_MASK;
+          // proceed
+          stage = STAGE_3_3_WAITFORID;
+        }
+#endif
+
+        break;
+      } /* end of STAGE_3_3_WAITFORIDORSIG */
+
+      case STAGE_3_3_WAITFORID:
+      {
+        aos.sssp.stage = AOS_SSSP_STARTUP_3_3;
+
+#if (AMIROOS_CFG_SSSP_STACK_END != true)
+        // a CAN message was received
+        if (eventmask & CANEVENT_MASK) {
+          // if an ID message was received
+          if (canRxFrame.DLC == 4 &&
+              canRxFrame.RTR == CAN_RTR_DATA &&
+              canRxFrame.IDE == CAN_IDE_STD &&
+              canRxFrame.SID == SSSP_STACKINIT_CANMSGID_MODULEID) {
+#if (AMIROOS_CFG_SSSP_STACK_START != true) || (AMIROOS_CFG_DBG == true)
+            // Plausibility of the received ID is not checked at this point but is done by other modules still in a previous stage.
+            lastid = _canDeserialize32(canRxFrame.data8);
+            aosDbgPrintf("ID (%u)\n", lastid);
+#endif
+            // restart timeout timer
+            chVTSet(&timerTimeout, LL_US2ST(AOS_SYSTEM_SSSP_TIMEOUT), _ssspTimerCallback, &eventSourceTimeout);
+            chEvtWaitAnyTimeout(TIMEOUTEVENT_MASK, TIME_IMMEDIATE);
+            eventmask &= ~TIMEOUTEVENT_MASK;
+          }
+        }
+#endif
+
+        break;
+      } /* end of STAGE_3_3_WAITFORID */
+
+      case STAGE_3_4_FINISH:
+      {
+        aos.sssp.stage = AOS_SSSP_STARTUP_3_4;
+
+        // if an IO event was received (S signal)
+        if ((eventmask & IOEVENT_MASK) && (ioflags & MODULE_SSSP_EVENTFLAGS_SYNC)) {
+          // reset the timeout timer
+          chVTReset(&timerTimeout);
+          chEvtWaitAnyTimeout(TIMEOUTEVENT_MASK, TIME_IMMEDIATE);
+          eventmask &= ~TIMEOUTEVENT_MASK;
+          //set the delay timer
+          chVTSet(&timerDelay, LL_US2ST(AOS_SYSTEM_SSSP_TIMEOUT), _ssspTimerCallback, &eventSourceDelay);
+        }
+
+        // if a CAN event was received
+        if (eventmask & CANEVENT_MASK) {
+          // if an abort message was received
+          if (canRxFrame.SID == SSSP_STACKINIT_CANMSGID_ABORT) {
+            aosDbgPrintf("abort msg\n");
+            // reset the delay timer
+            chVTReset(&timerDelay);
+            chEvtWaitAnyTimeout(DELAYEVENT_MASK, TIME_IMMEDIATE);
+            eventmask &= ~DELAYEVENT_MASK;
+            // proceed
+            stage = STAGE_3_4_ABORT;
+          }
+        }
+
+        // if a delay timer event occurred
+        if (eventmask & DELAYEVENT_MASK) {
+          aosDbgPrintf("sequence sucessful\n");
+          // sequence finished sucessfully
+          flags.loop = false;
+        }
+
+        break;
+      } /* end of STAGE_3_4_FINISH */
+
+      case STAGE_3_4_ABORT_ACTIVE:
+      {
+        aos.sssp.stage = AOS_SSSP_STARTUP_3_4;
+
+        // emit abort message
+        canTxFrame.DLC = 0;
+        canTxFrame.SID = SSSP_STACKINIT_CANMSGID_ABORT;
+        canTransmitTimeout(&MODULE_HAL_CAN, CAN_ANY_MAILBOX, &canTxFrame, TIME_INFINITE);
+        aosDbgPrintf("CAN -> abort\n");
+        // clear timeout flag
+        eventmask &= ~TIMEOUTEVENT_MASK;
+        // proceed immediately
+        stage = STAGE_3_4_ABORT;
+        flags.wfe_next = false;
+        break;
+      } /* end of STAGE_3_4_ABORT_ACTIVE */
+
+      case STAGE_3_4_ABORT:
+      {
+        aos.sssp.stage = AOS_SSSP_STARTUP_3_4;
+
+        // deactivate S
+        aosDbgPrintf("S-\n");
+        apalControlGpioSet(&moduleSsspGpioSync, APAL_GPIO_OFF);
+        // invalidate module ID
+        aos.sssp.moduleId = 0;
+
+        // if an IO event was received (S signal)
+        if ((eventmask & IOEVENT_MASK) && (ioflags & MODULE_SSSP_EVENTFLAGS_SYNC)) {
+          aosDbgPrintf("sequence aborted\n");
+          // exit the sequence
+          flags.loop = false;
+        }
+
+        break;
+      } /* end of STAGE_3_4_ABORT */
+    }
+
+    // fetch pending CAN message (if any)
+    if ((eventmask & CANEVENT_MASK) && (canReceiveTimeout(&MODULE_HAL_CAN, CAN_ANY_MAILBOX, &canRxFrame, TIME_IMMEDIATE) == MSG_OK)) {
+      aosDbgPrintf("CAN <- 0x%03X\n", canRxFrame.SID);
+      flags.wfe_next = false;
+    }
+
+    // handle unhandled timeout events
+    if (eventmask & TIMEOUTEVENT_MASK) {
+      aosDbgPrintf("ERR: timeout evt\n");
+      // abort
+      flags.wfe_next = false;
+      stage = STAGE_3_4_ABORT_ACTIVE;
+    }
+
+    // apply wfe value for next iteration
+    flags.wfe = flags.wfe_next;
+  }
+  aosDbgPrintf("\n");
+
+  // unregister all events (timeout, delay, CAN receive)
+  chEvtUnregister(&eventSourceTimeout, &eventListenerTimeout);
+  chEvtUnregister(&eventSourceDelay, &eventListenerDelay);
+  chEvtUnregister(&MODULE_HAL_CAN.rxfull_event, &eventListenerCan);
+  // clear any pending events (timeout, delay, CAN receive)
+  chEvtWaitAllTimeout(TIMEOUTEVENT_MASK | DELAYEVENT_MASK | CANEVENT_MASK, TIME_IMMEDIATE);
+
+  // reset all control signals
+#if (AMIROOS_CFG_SSSP_STACK_END != true)
+  apalControlGpioSet(&moduleSsspGpioUp, APAL_GPIO_OFF);
+#endif
+  apalControlGpioSet(&moduleSsspGpioSync, APAL_GPIO_OFF);
+
+  return shutdown;
 }
 
 /**
@@ -159,11 +831,7 @@ int main(void)
 #endif
 
 #if (AMIROOS_CFG_TESTS_ENABLE == true)
-#if defined(MODULE_INIT_TESTS)
   MODULE_INIT_TESTS();
-#else
-  #warning "MODULE_INIT_TESTS not defined"
-#endif
 #endif
 
 #if defined(AMIROOS_CFG_MAIN_INIT_HOOK_4)
@@ -248,8 +916,8 @@ int main(void)
     // unexpected IO events
     if (eventmask & _eventListenerIO.events) {
       eventflags = chEvtGetAndClearFlags(&_eventListenerIO);
-#ifdef MODULE_SSSP_STARTUP_OSINIT_OUTRO_IOEVENT_HOOK
-      MODULE_SSSP_STARTUP_OSINIT_OUTRO_IOEVENT_HOOK(eventmask, eventflags);
+#ifdef MODULE_SSSP_STARTUP_2_2_IOEVENT_HOOK
+      MODULE_SSSP_STARTUP_2_2_IOEVENT_HOOK(eventmask, eventflags);
 #else
       _unexpectedEventError(eventmask, eventflags);
 #endif
@@ -259,11 +927,20 @@ int main(void)
       eventflags = chEvtGetAndClearFlags(&_eventListenerOS);
       _unexpectedEventError(eventmask, eventflags);
     }
+#if (AMIROOS_CFG_DBG == true)
     // unknown event (must never occur, thus disabled for release builds)
     else {
-      _unexpectedEventError(eventmask, eventflags);
+      _unexpectedEventError(eventmask, 0);
     }
+#endif
   }
+
+  /*
+   * There must be no delays at this point, thus no hook is allowed.
+   */
+
+  /* SSSP startup stage 3 (module stack initialization) */
+  shutdown = _ssspModuleStackInitialization();
 
 #if defined(AMIROOS_CFG_MAIN_INIT_HOOK_8)
 #if defined(AMIROOS_CFG_MAIN_INIT_HOOK_8_ARGS)
@@ -274,7 +951,9 @@ int main(void)
 #endif
 
   /* completely start AMiRo-OS */
-  aosSysStart();
+  if (shutdown == AOS_SHUTDOWN_NONE) {
+    aosSysStart();
+  }
 
 #if defined(AMIROOS_CFG_MAIN_INIT_HOOK_9)
 #if defined(AMIROOS_CFG_MAIN_INIT_HOOK_9_ARGS)

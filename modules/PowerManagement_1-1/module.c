@@ -69,7 +69,7 @@ ADCConversionGroup moduleHalAdcVsysConversionGroup = {
 
 CANConfig moduleHalCanConfig = {
   /* mcr  */ CAN_MCR_ABOM | CAN_MCR_AWUM | CAN_MCR_TXFP,
-  /* btr  */ CAN_BTR_SJW(1) | CAN_BTR_TS2(2) | CAN_BTR_TS1(13) | CAN_BTR_BRP(1),
+  /* btr  */ CAN_BTR_SJW(1) | CAN_BTR_TS2(3) | CAN_BTR_TS1(15) | CAN_BTR_BRP(1),
 };
 
 EXTConfig moduleHalExtConfig = {
@@ -379,6 +379,24 @@ apalControlGpio_t moduleSsspGpioPd = {
 
 apalControlGpio_t moduleSsspGpioSync = {
   /* GPIO */ &moduleGpioSysSync,
+  /* meta */ {
+    /* active state */ APAL_GPIO_ACTIVE_LOW,
+    /* edge         */ APAL_GPIO_EDGE_FALLING,
+    /* direction    */ APAL_GPIO_DIRECTION_BIDIRECTIONAL,
+  },
+};
+
+apalControlGpio_t moduleSsspGpioDn = {
+  /* GPIO */ &moduleGpioSysUartDn,
+  /* meta */ {
+    /* active state */ APAL_GPIO_ACTIVE_LOW,
+    /* edge         */ APAL_GPIO_EDGE_FALLING,
+    /* direction    */ APAL_GPIO_DIRECTION_BIDIRECTIONAL,
+  },
+};
+
+apalControlGpio_t moduleSsspGpioUp = {
+  /* GPIO */ &moduleGpioSysUartUp,
   /* meta */ {
     /* active state */ APAL_GPIO_ACTIVE_LOW,
     /* edge         */ APAL_GPIO_EDGE_FALLING,

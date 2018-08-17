@@ -323,7 +323,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * PA9  - PROG_RX                       (alternate 7 pushpull floating)
  * PA10 - PROG_TX                       (alternate 7 pushpull pullup)
  * PA11 - CAN_RX                        (alternate 9 pushpull floating)
- * PA12 - CAN_TX                        (input floating)
+ * PA12 - CAN_TX                        (alternate 9 pushpull floating)
  * PA13 - SWDIO                         (alternate 0 pushpull floating)
  * PA14 - SWCLK                         (alternate 0 pushpull floating)
  * PA15 - SYS_SPI_SS1_N                 (input floating)
@@ -340,7 +340,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                                          PIN_MODE_ALTERNATE(GPIOA_PROG_RX) |                          \
                                          PIN_MODE_ALTERNATE(GPIOA_PROG_TX) |                          \
                                          PIN_MODE_ALTERNATE(GPIOA_CAN_RX) |                           \
-                                         PIN_MODE_INPUT(GPIOA_CAN_TX) |                               \
+                                         PIN_MODE_ALTERNATE(GPIOA_CAN_TX) |                           \
                                          PIN_MODE_ALTERNATE(GPIOA_SWDIO) |                            \
                                          PIN_MODE_ALTERNATE(GPIOA_SWCLK) |                            \
                                          PIN_MODE_INPUT(GPIOA_SYS_SPI_SS1_N))

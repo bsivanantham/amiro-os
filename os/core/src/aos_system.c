@@ -193,6 +193,9 @@ static unsigned int _printSystemInfoLine(BaseSequentialStream* stream, const cha
   n += chvprintf(stream, fmt, ap);
   va_end(ap);
 
+  streamPut(stream, '\n');
+  ++n;
+
   return n;
 }
 
@@ -205,26 +208,33 @@ static void _printSystemInfo(BaseSequentialStream* stream)
 {
   aosDbgCheck(stream != NULL);
 
+  // local variables
+  struct tm dt;
+  aosSysGetDateTime(&dt);
+
+  // print static information about module and operating system
   _printSystemInfoSeparator(stream, '=', SYSTEM_INFO_WIDTH);
-  _printSystemInfoLine(stream, "Module", SYSTEM_INFO_NAMEWIDTH, "%s (v%s)\n", BOARD_NAME, BOARD_VERSION);
+  _printSystemInfoLine(stream, "Module", SYSTEM_INFO_NAMEWIDTH, "%s (v%s)", BOARD_NAME, BOARD_VERSION);
 #ifdef PLATFORM_NAME
-  _printSystemInfoLine(stream, "Platform", SYSTEM_INFO_NAMEWIDTH, "%s\n", PLATFORM_NAME);
+  _printSystemInfoLine(stream, "Platform", SYSTEM_INFO_NAMEWIDTH, "%s", PLATFORM_NAME);
 #endif
 #ifdef PORT_CORE_VARIANT_NAME
-  _printSystemInfoLine(stream, "Core Variant", SYSTEM_INFO_NAMEWIDTH, "%s\n", PORT_CORE_VARIANT_NAME);
+  _printSystemInfoLine(stream, "Core Variant", SYSTEM_INFO_NAMEWIDTH, "%s", PORT_CORE_VARIANT_NAME);
 #endif
-  _printSystemInfoLine(stream, "Architecture", SYSTEM_INFO_NAMEWIDTH, "%s\n", PORT_ARCHITECTURE_NAME);
+  _printSystemInfoLine(stream, "Architecture", SYSTEM_INFO_NAMEWIDTH, "%s", PORT_ARCHITECTURE_NAME);
   _printSystemInfoSeparator(stream, '-', SYSTEM_INFO_WIDTH);
-  _printSystemInfoLine(stream, "AMiRo-OS" , SYSTEM_INFO_NAMEWIDTH, "%u.%u.%u %s (SSSP %u.%u)\n", AMIROOS_VERSION_MAJOR, AMIROOS_VERSION_MINOR, AMIROOS_VERSION_PATCH, AMIROOS_RELEASE_TYPE, AOS_SYSTEM_SSSP_MAJOR, AOS_SYSTEM_SSSP_MINOR);
-  _printSystemInfoLine(stream, "AMiRo-LLD" , SYSTEM_INFO_NAMEWIDTH, "%u.%u.%u %s (periphAL %u.%u)\n", AMIRO_LLD_VERSION_MAJOR, AMIRO_LLD_VERSION_MINOR, AMIRO_LLD_VERSION_PATCH, AMIRO_LLD_RELEASE_TYPE, PERIPHAL_VERSION_MAJOR, PERIPHAL_VERSION_MINOR);
-  _printSystemInfoLine(stream, "ChibiOS/RT" , SYSTEM_INFO_NAMEWIDTH, "%u.%u.%u %s\n", CH_KERNEL_MAJOR, CH_KERNEL_MINOR, CH_KERNEL_PATCH, (CH_KERNEL_STABLE == 1) ? "stable" : "non-stable");
-  _printSystemInfoLine(stream, "ChibiOS/HAL", SYSTEM_INFO_NAMEWIDTH, "%u.%u.%u %s\n", CH_HAL_MAJOR, CH_HAL_MINOR, CH_HAL_PATCH, (CH_HAL_STABLE == 1) ? "stable" : "non-stable");
-  _printSystemInfoLine(stream, "build type", SYSTEM_INFO_NAMEWIDTH,"%s\n", (AMIROOS_CFG_DBG == true) ? "debug" : "release");
-  _printSystemInfoLine(stream, "Compiler" , SYSTEM_INFO_NAMEWIDTH, "%s %u.%u.%u\n", "GCC", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__); // TODO: support other compilers than GCC
-  _printSystemInfoLine(stream, "Compiled" , SYSTEM_INFO_NAMEWIDTH, "%s - %s\n", __DATE__, __TIME__);
+  _printSystemInfoLine(stream, "AMiRo-OS" , SYSTEM_INFO_NAMEWIDTH, "%u.%u.%u %s (SSSP %u.%u)", AMIROOS_VERSION_MAJOR, AMIROOS_VERSION_MINOR, AMIROOS_VERSION_PATCH, AMIROOS_RELEASE_TYPE, AOS_SYSTEM_SSSP_VERSION_MAJOR, AOS_SYSTEM_SSSP_VERSION_MINOR);
+  _printSystemInfoLine(stream, "AMiRo-LLD" , SYSTEM_INFO_NAMEWIDTH, "%u.%u.%u %s (periphAL %u.%u)", AMIRO_LLD_VERSION_MAJOR, AMIRO_LLD_VERSION_MINOR, AMIRO_LLD_VERSION_PATCH, AMIRO_LLD_RELEASE_TYPE, PERIPHAL_VERSION_MAJOR, PERIPHAL_VERSION_MINOR);
+  _printSystemInfoLine(stream, "ChibiOS/RT" , SYSTEM_INFO_NAMEWIDTH, "%u.%u.%u %s", CH_KERNEL_MAJOR, CH_KERNEL_MINOR, CH_KERNEL_PATCH, (CH_KERNEL_STABLE == 1) ? "stable" : "non-stable");
+  _printSystemInfoLine(stream, "ChibiOS/HAL", SYSTEM_INFO_NAMEWIDTH, "%u.%u.%u %s", CH_HAL_MAJOR, CH_HAL_MINOR, CH_HAL_PATCH, (CH_HAL_STABLE == 1) ? "stable" : "non-stable");
+  _printSystemInfoLine(stream, "build type", SYSTEM_INFO_NAMEWIDTH,"%s", (AMIROOS_CFG_DBG == true) ? "debug" : "release");
+  _printSystemInfoLine(stream, "Compiler" , SYSTEM_INFO_NAMEWIDTH, "%s %u.%u.%u", "GCC", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__); // TODO: support other compilers than GCC
+  _printSystemInfoLine(stream, "Compiled" , SYSTEM_INFO_NAMEWIDTH, "%s - %s", __DATE__, __TIME__);
+
+  // print static information about the bootloader
   _printSystemInfoSeparator(stream, '-', SYSTEM_INFO_WIDTH);
   if (BL_CALLBACK_TABLE_ADDRESS->magicNumber == BL_MAGIC_NUMBER) {
-    _printSystemInfoLine(stream, "AMiRo-BLT", SYSTEM_INFO_NAMEWIDTH, "%u.%u.%u %s (SSSP %u.%u)\n", BL_CALLBACK_TABLE_ADDRESS->vBootloader.major, BL_CALLBACK_TABLE_ADDRESS->vBootloader.minor, BL_CALLBACK_TABLE_ADDRESS->vBootloader.patch,
+    _printSystemInfoLine(stream, "AMiRo-BLT", SYSTEM_INFO_NAMEWIDTH, "%u.%u.%u %s (SSSP %u.%u)", BL_CALLBACK_TABLE_ADDRESS->vBootloader.major, BL_CALLBACK_TABLE_ADDRESS->vBootloader.minor, BL_CALLBACK_TABLE_ADDRESS->vBootloader.patch,
                          (BL_CALLBACK_TABLE_ADDRESS->vBootloader.identifier == BL_VERSION_ID_AMiRoBLT_Release) ? "stable" :
                          (BL_CALLBACK_TABLE_ADDRESS->vBootloader.identifier == BL_VERSION_ID_AMiRoBLT_ReleaseCandidate) ? "release candidate" :
                          (BL_CALLBACK_TABLE_ADDRESS->vBootloader.identifier == BL_VERSION_ID_AMiRoBLT_Beta) ? "beta" :
@@ -232,14 +242,14 @@ static void _printSystemInfo(BaseSequentialStream* stream)
                          (BL_CALLBACK_TABLE_ADDRESS->vBootloader.identifier == BL_VERSION_ID_AMiRoBLT_PreAlpha) ? "pre-alpha" :
                          "<release type unknown>",
                          BL_CALLBACK_TABLE_ADDRESS->vSSSP.major, BL_CALLBACK_TABLE_ADDRESS->vSSSP.minor);
-    if (BL_CALLBACK_TABLE_ADDRESS->vSSSP.major != AOS_SYSTEM_SSSP_MAJOR) {
+    if (BL_CALLBACK_TABLE_ADDRESS->vSSSP.major != AOS_SYSTEM_SSSP_VERSION_MAJOR) {
       if (stream) {
         chprintf(stream, "WARNING: Bootloader and AMiRo-OS implement incompatible SSSP versions!\n");
       } else {
         aosprintf("WARNING: Bootloader and AMiRo-OS implement incompatible SSSP versions!\n");
       }
     }
-    _printSystemInfoLine(stream, "Compiler", SYSTEM_INFO_NAMEWIDTH, "%s %u.%u.%u\n", (BL_CALLBACK_TABLE_ADDRESS->vCompiler.identifier == BL_VERSION_ID_GCC) ? "GCC" : "<compiler unknown>", BL_CALLBACK_TABLE_ADDRESS->vCompiler.major, BL_CALLBACK_TABLE_ADDRESS->vCompiler.minor, BL_CALLBACK_TABLE_ADDRESS->vCompiler.patch); // TODO: support other compilers than GCC
+    _printSystemInfoLine(stream, "Compiler", SYSTEM_INFO_NAMEWIDTH, "%s %u.%u.%u", (BL_CALLBACK_TABLE_ADDRESS->vCompiler.identifier == BL_VERSION_ID_GCC) ? "GCC" : "<compiler unknown>", BL_CALLBACK_TABLE_ADDRESS->vCompiler.major, BL_CALLBACK_TABLE_ADDRESS->vCompiler.minor, BL_CALLBACK_TABLE_ADDRESS->vCompiler.patch); // TODO: support other compilers than GCC
   } else {
     if (stream) {
       chprintf(stream, "Bootloader incompatible or not available.\n");
@@ -247,14 +257,20 @@ static void _printSystemInfo(BaseSequentialStream* stream)
       aosprintf("Bootloader incompatible or not available.\n");
     }
   }
+
+  // print dynamic information about the module
   _printSystemInfoSeparator(stream, '-', SYSTEM_INFO_WIDTH);
-  struct tm dt;
-  aosSysGetDateTime(&dt);
-  _printSystemInfoLine(stream, "Date", SYSTEM_INFO_NAMEWIDTH, "%s %02u-%02u-%04u\n", (dt.tm_wday == 0) ? "Sunday" : (dt.tm_wday == 1) ? "Monday" : (dt.tm_wday == 2) ? "Tuesday" : (dt.tm_wday == 3) ? "Wednesday" : (dt.tm_wday == 4) ? "Thursday" : (dt.tm_wday == 5) ? "Friday" : "Saturday",
+  if (aos.sssp.moduleId != 0) {
+    _printSystemInfoLine(stream, "Module ID", SYSTEM_INFO_NAMEWIDTH, "%u", aos.sssp.moduleId);
+  } else {
+    _printSystemInfoLine(stream, "Module ID", SYSTEM_INFO_NAMEWIDTH, "not available");
+  }
+  _printSystemInfoLine(stream, "Date", SYSTEM_INFO_NAMEWIDTH, "%s %02u-%02u-%04u", (dt.tm_wday == 0) ? "Sunday" : (dt.tm_wday == 1) ? "Monday" : (dt.tm_wday == 2) ? "Tuesday" : (dt.tm_wday == 3) ? "Wednesday" : (dt.tm_wday == 4) ? "Thursday" : (dt.tm_wday == 5) ? "Friday" : "Saturday",
                        dt.tm_mday,
                        dt.tm_mon + 1,
                        dt.tm_year + 1900);
-  _printSystemInfoLine(stream, "Time", SYSTEM_INFO_NAMEWIDTH, "%02u:%02u:%02u\n", dt.tm_hour, dt.tm_min, dt.tm_sec);
+  _printSystemInfoLine(stream, "Time", SYSTEM_INFO_NAMEWIDTH, "%02u:%02u:%02u", dt.tm_hour, dt.tm_min, dt.tm_sec);
+
   _printSystemInfoSeparator(stream, '=', SYSTEM_INFO_WIDTH);
 
   return;

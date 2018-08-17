@@ -250,6 +250,15 @@ apalControlGpio_t moduleSsspGpioSync = {
   },
 };
 
+apalControlGpio_t moduleSsspGpioDn = {
+  /* GPIO */ &moduleGpioSysUartDn,
+  /* meta */ {
+    /* active state */ APAL_GPIO_ACTIVE_LOW,
+    /* edge         */ APAL_GPIO_EDGE_FALLING,
+    /* direction    */ APAL_GPIO_DIRECTION_BIDIRECTIONAL,
+  },
+};
+
 /** @} */
 
 /*===========================================================================*/

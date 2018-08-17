@@ -58,12 +58,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /**
  * @brief   Major version of the implemented SSSP.
  */
-#define AOS_SYSTEM_SSSP_MAJOR                   1
+#define AOS_SYSTEM_SSSP_VERSION_MAJOR           1
 
 /**
  * @brief   Minor version of the implemented SSSP.
  */
-#define AOS_SYSTEM_SSSP_MINOR                   3
+#define AOS_SYSTEM_SSSP_VERSION_MINOR           4
+
+/**
+ * @brief   Timeout delay according to SSSP.
+ * @details SSSP defines timeouts to be ten times longer than the signal delay time.
+ */
+#define AOS_SYSTEM_SSSP_TIMEOUT                 (10 * AMIROOS_CFG_SSSP_SIGNALDELAY)
 
 /**
  * @brief   Enumerator to identify shutdown types.
@@ -78,26 +84,31 @@ typedef enum aos_shutdown {
 } aos_shutdown_t;
 
 /**
- * @brief   Enumerator of the several stages of SSSP
+ * @brief   Enumerator of the several stages of SSSP.
  */
 typedef enum aos_ssspstage {
-  AOS_SSSP_STARTUP_1_1  = 0x0000, /**< Identifier of SSSP startup phase stage 1-1. */
-  AOS_SSSP_STARTUP_1_2  = 0x0001, /**< Identifier of SSSP startup phase stage 1-2. */
-  AOS_SSSP_STARTUP_1_3  = 0x0002, /**< Identifier of SSSP startup phase stage 1-3. */
-  AOS_SSSP_STARTUP_2_1  = 0x0004, /**< Identifier of SSSP startup phase stage 2-1. */
-  AOS_SSSP_STARTUP_2_2  = 0x0005, /**< Identifier of SSSP startup phase stage 2-2. */
-  AOS_SSSP_STARTUP_3_1  = 0x0008, /**< Identifier of SSSP startup phase stage 3-1. */
-  AOS_SSSP_STARTUP_3_2  = 0x0009, /**< Identifier of SSSP startup phase stage 3-2. */
-  AOS_SSSP_STARTUP_3_3  = 0x000A, /**< Identifier of SSSP startup phase stage 3-3. */
-  AOS_SSSP_STARTUP_3_4  = 0x000B, /**< Identifier of SSSP startup phase stage 3-4. */
-  AOS_SSSP_OPERATION    = 0x0100, /**< Identifier of SSSP operation pahse. */
-  AOS_SSSP_SHUTDOWN_1_1 = 0x0200, /**< Identifier of SSSP shutdown phase stage 1-1. */
-  AOS_SSSP_SHUTDOWN_1_2 = 0x0201, /**< Identifier of SSSP shutdown phase stage 1-2. */
-  AOS_SSSP_SHUTDOWN_1_3 = 0x0202, /**< Identifier of SSSP shutdown phase stage 1-3. */
-  AOS_SSSP_SHUTDOWN_2_1 = 0x0204, /**< Identifier of SSSP shutdown phase stage 2-1. */
-  AOS_SSSP_SHUTDOWN_2_2 = 0x0205, /**< Identifier of SSSP shutdown phase stage 2-2. */
-  AOS_SSSP_SHUTDOWN_3   = 0x0208, /**< Identifier of SSSP shutdown phase stage 3. */
+  AOS_SSSP_STARTUP_1_1  = 0x10, /**< Identifier of SSSP startup phase stage 1-1. */
+  AOS_SSSP_STARTUP_1_2  = 0x11, /**< Identifier of SSSP startup phase stage 1-2. */
+  AOS_SSSP_STARTUP_1_3  = 0x12, /**< Identifier of SSSP startup phase stage 1-3. */
+  AOS_SSSP_STARTUP_2_1  = 0x14, /**< Identifier of SSSP startup phase stage 2-1. */
+  AOS_SSSP_STARTUP_2_2  = 0x15, /**< Identifier of SSSP startup phase stage 2-2. */
+  AOS_SSSP_STARTUP_3_1  = 0x18, /**< Identifier of SSSP startup phase stage 3-1. */
+  AOS_SSSP_STARTUP_3_2  = 0x19, /**< Identifier of SSSP startup phase stage 3-2. */
+  AOS_SSSP_STARTUP_3_3  = 0x1A, /**< Identifier of SSSP startup phase stage 3-3. */
+  AOS_SSSP_STARTUP_3_4  = 0x1B, /**< Identifier of SSSP startup phase stage 3-4. */
+  AOS_SSSP_OPERATION    = 0x20, /**< Identifier of SSSP operation pahse. */
+  AOS_SSSP_SHUTDOWN_1_1 = 0x30, /**< Identifier of SSSP shutdown phase stage 1-1. */
+  AOS_SSSP_SHUTDOWN_1_2 = 0x31, /**< Identifier of SSSP shutdown phase stage 1-2. */
+  AOS_SSSP_SHUTDOWN_1_3 = 0x32, /**< Identifier of SSSP shutdown phase stage 1-3. */
+  AOS_SSSP_SHUTDOWN_2_1 = 0x34, /**< Identifier of SSSP shutdown phase stage 2-1. */
+  AOS_SSSP_SHUTDOWN_2_2 = 0x35, /**< Identifier of SSSP shutdown phase stage 2-2. */
+  AOS_SSSP_SHUTDOWN_3   = 0x38, /**< Identifier of SSSP shutdown phase stage 3. */
 } aos_ssspstage_t;
+
+/**
+ * @brief   Type to represent module IDs.
+ */
+typedef uint16_t aos_ssspmoduleid_t;
 
 /**
  * @brief   AMiRo-OS base system structure.
@@ -112,6 +123,13 @@ typedef struct aos_system {
      * @brief   Current SSSP stage of the system.
      */
     aos_ssspstage_t stage;
+
+    /**
+     * @brief   Module identifier.
+     * @details A value of 0 indicates an uninitialized ID.
+     *          The vlaues 0 and ~0 are reserved und must not be set.
+     */
+    aos_ssspmoduleid_t moduleId;
   } sssp;
 
   /**
@@ -151,6 +169,8 @@ extern aos_system_t aos;
 
 /**
  * @brief   Printf function that uses the default system I/O stream.
+ *
+ * @param[in] fmt   Formatted string to print.
  */
 #define aosprintf(fmt, ...)                     chprintf((BaseSequentialStream*)&aos.iostream, fmt, ##__VA_ARGS__)
 

@@ -310,7 +310,6 @@ const char* moduleShellPrompt = "DiWheelDrive";
  */
 /*===========================================================================*/
 
-
 apalControlGpio_t moduleSsspGpioPd = {
   /* GPIO */ &moduleGpioSysPd,
   /* meta */ {
@@ -322,6 +321,15 @@ apalControlGpio_t moduleSsspGpioPd = {
 
 apalControlGpio_t moduleSsspGpioSync = {
   /* GPIO */ &moduleGpioSysSync,
+  /* meta */ {
+    /* active state */ APAL_GPIO_ACTIVE_LOW,
+    /* edge         */ APAL_GPIO_EDGE_FALLING,
+    /* direction    */ APAL_GPIO_DIRECTION_BIDIRECTIONAL,
+  },
+};
+
+apalControlGpio_t moduleSsspGpioUp = {
+  /* GPIO */ &moduleGpioSysUartUp,
   /* meta */ {
     /* active state */ APAL_GPIO_ACTIVE_LOW,
     /* edge         */ APAL_GPIO_EDGE_FALLING,
