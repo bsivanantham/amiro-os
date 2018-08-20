@@ -604,17 +604,20 @@ static void _signalSyncCallback(EXTDriver* extp, expchannel_t channel)
   aos_timestamp_t uptime;
 
   chSysLockFromISR();
-  // get current uptime
-  aosSysGetUptimeX(&uptime);
-  // read signal S
-  apalControlGpioGet(&moduleSsspGpioSync, &s_state);
-  // if S was toggled from on to off during SSSP operation phase
-  if (aos.sssp.stage == AOS_SSSP_OPERATION && s_state == APAL_GPIO_OFF) {
-    // align the uptime with the synchronization period
-    if (uptime % AMIROOS_CFG_SSSP_SYSSYNCPERIOD < AMIROOS_CFG_SSSP_SYSSYNCPERIOD / 2) {
-      _uptime -= uptime % AMIROOS_CFG_SSSP_SYSSYNCPERIOD;
-    } else {
-      _uptime += AMIROOS_CFG_SSSP_SYSSYNCPERIOD - (uptime % AMIROOS_CFG_SSSP_SYSSYNCPERIOD);
+  // if the system is in operation phase
+  if (aos.sssp.stage == AOS_SSSP_OPERATION) {
+    // read signal S
+    apalControlGpioGet(&moduleSsspGpioSync, &s_state);
+    // if S was toggled from on to off
+    if (s_state == APAL_GPIO_OFF) {
+      // get current uptime
+      aosSysGetUptimeX(&uptime);
+      // align the uptime with the synchronization period
+      if (uptime % AMIROOS_CFG_SSSP_SYSSYNCPERIOD < AMIROOS_CFG_SSSP_SYSSYNCPERIOD / 2) {
+        _uptime -= uptime % AMIROOS_CFG_SSSP_SYSSYNCPERIOD;
+      } else {
+        _uptime += AMIROOS_CFG_SSSP_SYSSYNCPERIOD - (uptime % AMIROOS_CFG_SSSP_SYSSYNCPERIOD);
+      }
     }
   }
   // broadcast event
@@ -662,10 +665,9 @@ static void _sysSyncTimerCallback(void* par)
   aos_timestamp_t uptime;
 
   chSysLockFromISR();
-  // read and toggle signal S
+  // toggle and read signal S
+  apalGpioToggle(moduleSsspGpioSync.gpio);
   apalControlGpioGet(&moduleSsspGpioSync, &s_state);
-  s_state = (s_state == APAL_GPIO_ON) ? APAL_GPIO_OFF : APAL_GPIO_ON;
-  apalControlGpioSet(&moduleSsspGpioSync, s_state);
   // if S was toggled from off to on
   if (s_state == APAL_GPIO_ON) {
     // reconfigure the timer precisely, because the logically falling edge (next interrupt) snychronizes the system time
@@ -749,6 +751,19 @@ inline void aosSysStart(void)
   // update the system SSSP stage
   aos.sssp.stage = AOS_SSSP_OPERATION;
 
+#if (AMIROOS_CFG_SSSP_MASTER == true)
+  {
+    chSysLock();
+    // start the system synchronization counter
+    // The first iteration of the timer is set to the next 'center' of a 'slice'.
+    aos_timestamp_t t;
+    aosSysGetUptimeX(&t);
+    t = AMIROOS_CFG_SSSP_SYSSYNCPERIOD - (t % AMIROOS_CFG_SSSP_SYSSYNCPERIOD);
+    chVTSetI(&_syssynctimer, LL_US2ST((t > (AMIROOS_CFG_SSSP_SYSSYNCPERIOD / 2)) ? (t - (AMIROOS_CFG_SSSP_SYSSYNCPERIOD / 2)) : (t + (AMIROOS_CFG_SSSP_SYSSYNCPERIOD / 2))), _sysSyncTimerCallback, NULL);
+    chSysUnlock();
+  }
+#endif
+
   // print system information;
   _printSystemInfo((BaseSequentialStream*)&aos.iostream);
   aosprintf("\n");
@@ -796,10 +811,6 @@ eventmask_t aosSysSsspStartupOsInitSyncCheck(event_listener_t* syncEvtListener)
       f == MODULE_SSSP_EVENTFLAGS_SYNC &&
       s == APAL_GPIO_OFF) {
     chSysLock();
-#if (AMIROOS_CFG_SSSP_MASTER == true)
-    // start the systen synchronization counter
-    chVTSetI(&_syssynctimer, LL_US2ST(AMIROOS_CFG_SSSP_SYSSYNCPERIOD / 2), &_sysSyncTimerCallback, NULL);
-#endif
     // start the uptime counter
     _synctime = chVTGetSystemTimeX();
     _uptime = 0;

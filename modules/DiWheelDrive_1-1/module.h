@@ -456,15 +456,6 @@ extern apalControlGpio_t moduleSsspGpioUp;
  */
 #define MODULE_SSSP_EVENTFLAGS_UP               MODULE_OS_IOEVENTFLAGS_SYSUARTUP
 
-/**
- * @brief   Hook to handle IO events during SSSP startup synchronization.
- */
-#define MODULE_SSSP_STARTUP_2_2_IOEVENT_HOOK(mask, flags) {                   \
-  /* ignore all events */                                                     \
-  (void)mask;                                                                 \
-  (void)flags;                                                                \
-}
-
 /** @} */
 
 /*===========================================================================*/

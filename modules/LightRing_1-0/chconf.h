@@ -64,7 +64,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *          this value.
  */
 #if (AMIROOS_CFG_TESTS_ENABLE != true) || defined(__DOXYGEN__)
-#define CH_CFG_ST_TIMEDELTA                 10
+#define CH_CFG_ST_TIMEDELTA                 20
 #else
 #define CH_CFG_ST_TIMEDELTA                 2
 #endif
