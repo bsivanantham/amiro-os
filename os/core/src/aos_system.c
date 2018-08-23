@@ -80,6 +80,11 @@ static virtual_timer_t _syssynctimer;
 static aos_timestamp_t _syssynctime;
 #endif
 
+#if ((AMIROOS_CFG_SSSP_MASTER != true) && (AMIROOS_CFG_PROFILE == true)) || defined(__DOXYGEN__)
+static float _syssyncskew;
+#define SYSTEM_SYSSYNCSKEW_LPFACTOR   (0.1f / AOS_SYSTEM_TIME_RESOLUTION)
+#endif
+
 #if (AMIROOS_CFG_SHELL_ENABLE == true) || defined(__DOXYGEN__)
 /**
  * @brief   Shell thread working area.
@@ -461,7 +466,7 @@ static int _shellcmd_infocb(BaseSequentialStream* stream, int argc, char* argv[]
   _printSystemInfo(stream);
 
   // print time measurement precision
-  chprintf(stream, "system time resolution: %uus\n", AOS_SYSTEM_TIME_RESOLUTION);
+  chprintf(stream, "module time resolution: %uus\n", AOS_SYSTEM_TIME_RESOLUTION);
 
   // print system uptime
   aos_timestamp_t uptime;
@@ -473,6 +478,10 @@ static int _shellcmd_infocb(BaseSequentialStream* stream, int argc, char* argv[]
   chprintf(stream, "%10u seconds\n", (uint8_t)(uptime % MICROSECONDS_PER_MINUTE / MICROSECONDS_PER_SECOND));
   chprintf(stream, "%10u milliseconds\n", (uint16_t)(uptime % MICROSECONDS_PER_SECOND / MICROSECONDS_PER_MILLISECOND));
   chprintf(stream, "%10u microseconds\n", (uint16_t)(uptime % MICROSECONDS_PER_MILLISECOND / MICROSECONDS_PER_MICROSECOND));
+#if (AMIROOS_CFG_SSSP_MASTER != true) && (AMIROOS_CFG_PROFILE == true)
+  chprintf(stream, "SSSP synchronization offset: %.3fus per %uus\n", _syssyncskew, AMIROOS_CFG_SSSP_SYSSYNCPERIOD);
+#endif
+  _printSystemInfoSeparator(stream, '=', SYSTEM_INFO_WIDTH);
 
   return AOS_OK;
 }
@@ -615,8 +624,14 @@ static void _signalSyncCallback(EXTDriver* extp, expchannel_t channel)
       // align the uptime with the synchronization period
       if (uptime % AMIROOS_CFG_SSSP_SYSSYNCPERIOD < AMIROOS_CFG_SSSP_SYSSYNCPERIOD / 2) {
         _uptime -= uptime % AMIROOS_CFG_SSSP_SYSSYNCPERIOD;
+#if (AMIROOS_CFG_PROFILE == true)
+        _syssyncskew = ((1.0f - SYSTEM_SYSSYNCSKEW_LPFACTOR) * _syssyncskew) + (SYSTEM_SYSSYNCSKEW_LPFACTOR * (uptime % AMIROOS_CFG_SSSP_SYSSYNCPERIOD));
+#endif
       } else {
         _uptime += AMIROOS_CFG_SSSP_SYSSYNCPERIOD - (uptime % AMIROOS_CFG_SSSP_SYSSYNCPERIOD);
+#if (AMIROOS_CFG_PROFILE == true)
+        _syssyncskew = ((1.0f - SYSTEM_SYSSYNCSKEW_LPFACTOR) * _syssyncskew) - (SYSTEM_SYSSYNCSKEW_LPFACTOR * (AMIROOS_CFG_SSSP_SYSSYNCPERIOD - (uptime % AMIROOS_CFG_SSSP_SYSSYNCPERIOD)));
+#endif
       }
     }
   }
@@ -708,6 +723,9 @@ void aosSysInit(void)
 #if (AMIROOS_CFG_SSSP_MASTER == true)
   chVTObjectInit(&_syssynctimer);
   _syssynctime = 0;
+#endif
+#if (AMIROOS_CFG_SSSP_MASTER != true) && (AMIROOS_CFG_PROFILE == true)
+  _syssyncskew = 0.0f;
 #endif
 
   // set aos configuration

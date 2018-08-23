@@ -43,7 +43,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /*===========================================================================*/
 
 /**
- * @brief   Flag to enable/disable debug API.
+ * @brief   Flag to enable/disable debug API and logic.
  */
 #if !defined(OS_CFG_DBG)
   #define AMIROOS_CFG_DBG                       true
@@ -61,7 +61,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #endif
 
 /**
- * @brief   Flag to enable/disable profiling API.
+ * @brief   Flag to enable/disable profiling API and logic.
  */
 #if !defined(OS_CFG_PROFILE)
   #define AMIROOS_CFG_PROFILE                   true
@@ -150,7 +150,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /**
  * @brief   Shell enable flag.
  */
-#if (AMIROOS_CFG_TESTS_ENABLE != true) && !defined(OS_CFG_SHELL_ENABLE)
+#if !defined(OS_CFG_SHELL_ENABLE) && (AMIROOS_CFG_TESTS_ENABLE != true)
   #define AMIROOS_CFG_SHELL_ENABLE              true
 #elif (AMIROOS_CFG_TESTS_ENABLE == true)
   #define AMIROOS_CFG_SHELL_ENABLE              true

@@ -116,6 +116,7 @@ static inline void _unexpectedEventError(const eventmask_t mask, const eventflag
   (void)(mask);
   (void)(flags);
 #endif
+  return;
 }
 
 /**

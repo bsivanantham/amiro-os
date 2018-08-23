@@ -61,7 +61,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #define aosDbgPrintf(fmt, ...)           chprintf((BaseSequentialStream*)&aos.iostream, fmt, ##__VA_ARGS__)
 
-#else
+#else /* (AMIROOS_CFG_DBG != true) */
 
 #define aosDbgCheck(c) {                                  \
   (void)(c);                                              \
