@@ -81,7 +81,14 @@ static aos_timestamp_t _syssynctime;
 #endif
 
 #if ((AMIROOS_CFG_SSSP_MASTER != true) && (AMIROOS_CFG_PROFILE == true)) || defined(__DOXYGEN__)
+/**
+ * @brief   Offset between local clock and system wide synchronization signal.
+ */
 static float _syssyncskew;
+
+/**
+ * @brief   Weighting factor for the low-pass filter used for calculating the @p _syssyncskew value.
+ */
 #define SYSTEM_SYSSYNCSKEW_LPFACTOR   (0.1f / AOS_SYSTEM_TIME_RESOLUTION)
 #endif
 
