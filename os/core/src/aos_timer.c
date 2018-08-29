@@ -45,9 +45,9 @@ static inline void _setupTimer(aos_timer_t* timer)
   if ( (timer->wkuptime > uptime) && ((timer->wkuptime - uptime) > TIME_IMMEDIATE) ) {
     // split the time delta if necessary
     if ((timer->wkuptime - uptime) > AOS_TIMER_MAX_INTERVAL_US) {
-      chVTSetI(&(timer->vt), US2ST(AOS_TIMER_MAX_INTERVAL_US), _intermediateCb, timer);
+      chVTSetI(&(timer->vt), TIME_US2I(AOS_TIMER_MAX_INTERVAL_US), _intermediateCb, timer);
     } else {
-      chVTSetI(&(timer->vt), US2ST(timer->wkuptime - uptime), _fireCb, timer);
+      chVTSetI(&(timer->vt), TIME_US2I(timer->wkuptime - uptime), _fireCb, timer);
     }
   } else {
     vtfunc_t fn = timer->callback;

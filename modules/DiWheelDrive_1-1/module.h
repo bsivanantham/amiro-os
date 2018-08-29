@@ -36,6 +36,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /*===========================================================================*/
 #include <hal.h>
 #include <hal_qei.h>
+#include <aos_interrupts.h>
 
 /**
  * @brief   CAN driver to use.
@@ -48,14 +49,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 extern CANConfig moduleHalCanConfig;
 
 /**
- * @brief   Interrupt driver to use.
+ * @brief   Interrupt driver (PAL).
  */
-#define MODULE_HAL_EXT                          EXTD1
+
+extern aos_interrupt_driver_t moduleIntDriver;
 
 /**
- * @brief   Interrupt driver configuration.
+ * @brief   Interrupt driver config.
  */
-extern EXTConfig moduleHalExtConfig;
+extern aos_interrupt_cfg_t moduleIntConfig[10];
 
 /**
  * @brief   I2C driver to access the compass.
@@ -171,52 +173,52 @@ extern SPIConfig moduleHalSpiGyroscopeConfig;
 /**
  * @brief   Interrupt channel for the SYS_SYNC signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_SYSSYNC          ((expchannel_t)1)
+#define MODULE_GPIO_INT_SYSSYNC          ((uint8_t)1)
 
 /**
  * @brief   Interrupt channel for the SYS_WARMRST signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_SYSWARMRST       ((expchannel_t)2)
+#define MODULE_GPIO_INT_SYSWARMRST       ((uint8_t)2)
 
 /**
  * @brief   Interrupt channel for the PATH_DCSTAT signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_PATHDCSTAT       ((expchannel_t)3)
+#define MODULE_GPIO_INT_PATHDCSTAT       ((uint8_t)3)
 
 /**
  * @brief   Interrupt channel for the COMPASS_DRDY signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_COMPASSDRDY      ((expchannel_t)5)
+#define MODULE_GPIO_INT_COMPASSDRDY      ((uint8_t)4)
 
 /**
  * @brief   Interrupt channel for the SYS_PD signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_SYSPD            ((expchannel_t)8)
+#define MODULE_GPIO_INT_SYSPD            ((uint8_t)5)
 
 /**
  * @brief   Interrupt channel for the SYS_REG_EN signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_SYSREGEN         ((expchannel_t)9)
+#define MODULE_GPIO_INT_SYSREGEN         ((uint8_t)6)
 
 /**
  * @brief   Interrupt channel for the IR_INT signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_IRINT            ((expchannel_t)12)
+#define MODULE_GPIO_INT_IRINT            ((uint8_t)7)
 
 /**
  * @brief   Interrupt channel for the GYRO_DRDY signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_GYRODRDY         ((expchannel_t)13)
+#define MODULE_GPIO_INT_GYRODRDY         ((uint8_t)8)
 
 /**
  * @brief   Interrupt channel for the SYS_UART_UP signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_SYSUARTUP        ((expchannel_t)14)
+#define MODULE_GPIO_INT_SYSUARTUP        ((uint8_t)9)
 
 /**
  * @brief   Interrupt channel for the ACCEL_INT signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_ACCELINT         ((expchannel_t)15)
+#define MODULE_GPIO_INT_ACCELINT         ((uint8_t)10)
 
 /**
  * @brief   LED output signal GPIO.
@@ -295,52 +297,52 @@ extern apalGpio_t moduleGpioSysWarmrst;
 /**
  * @brief   Event flag to be set on a SYS_SYNC interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_SYSSYNC          ((eventflags_t)(1 << MODULE_GPIO_EXTCHANNEL_SYSSYNC))
+#define MODULE_OS_IOEVENTFLAGS_SYSSYNC          ((eventflags_t)(1 << MODULE_GPIO_INT_SYSSYNC))
 
 /**
  * @brief   Event flag to be set on a SYS_WARMRST interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_SYSWARMRST       ((eventflags_t)(1 << MODULE_GPIO_EXTCHANNEL_SYSWARMRST))
+#define MODULE_OS_IOEVENTFLAGS_SYSWARMRST       ((eventflags_t)(1 << MODULE_GPIO_INT_SYSWARMRST))
 
 /**
  * @brief   Event flag to be set on a PATH_DCSTAT interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_PATHDCSTAT       ((eventflags_t)(1 << MODULE_GPIO_EXTCHANNEL_PATHDCSTAT))
+#define MODULE_OS_IOEVENTFLAGS_PATHDCSTAT       ((eventflags_t)(1 << MODULE_GPIO_INT_PATHDCSTAT))
 
 /**
  * @brief   Event flag to be set on a COMPASS_DRDY interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_COMPASSDRDY      ((eventflags_t)(1 << MODULE_GPIO_EXTCHANNEL_COMPASSDRDY))
+#define MODULE_OS_IOEVENTFLAGS_COMPASSDRDY      ((eventflags_t)(1 << MODULE_GPIO_INT_COMPASSDRDY))
 
 /**
  * @brief   Event flag to be set on a SYS_PD interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_SYSPD            ((eventflags_t)(1 << MODULE_GPIO_EXTCHANNEL_SYSPD))
+#define MODULE_OS_IOEVENTFLAGS_SYSPD            ((eventflags_t)(1 << MODULE_GPIO_INT_SYSPD))
 
 /**
  * @brief   Event flag to be set on a SYS_REG_EN interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_SYSREGEN         ((eventflags_t)(1 << MODULE_GPIO_EXTCHANNEL_SYSREGEN))
+#define MODULE_OS_IOEVENTFLAGS_SYSREGEN         ((eventflags_t)(1 << MODULE_GPIO_INT_SYSREGEN))
 
 /**
  * @brief   Event flag to be set on a IR_INT interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_IRINT            ((eventflags_t)(1 << MODULE_GPIO_EXTCHANNEL_IRINT))
+#define MODULE_OS_IOEVENTFLAGS_IRINT            ((eventflags_t)(1 << MODULE_GPIO_INT_IRINT))
 
 /**
  * @brief   Event flag to be set on a GYRO_DRDY interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_GYRODRDY         ((eventflags_t)(1 << MODULE_GPIO_EXTCHANNEL_GYRODRDY))
+#define MODULE_OS_IOEVENTFLAGS_GYRODRDY         ((eventflags_t)(1 << MODULE_GPIO_INT_GYRODRDY))
 
 /**
  * @brief   Event flag to be set on a SYS_UART_UP interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_SYSUARTUP        ((eventflags_t)(1 << MODULE_GPIO_EXTCHANNEL_SYSUARTUP))
+#define MODULE_OS_IOEVENTFLAGS_SYSUARTUP        ((eventflags_t)(1 << MODULE_GPIO_INT_SYSUARTUP))
 
 /**
  * @brief   Event flag to be set on a ACCEL_INT interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_ACCELINT         ((eventflags_t)(1 << MODULE_GPIO_EXTCHANNEL_ACCELINT))
+#define MODULE_OS_IOEVENTFLAGS_ACCELINT         ((eventflags_t)(1 << MODULE_GPIO_INT_ACCELINT))
 
 #if (AMIROOS_CFG_SHELL_ENABLE == true) || defined(__DOXYGEN__)
 /**

@@ -169,7 +169,7 @@ aos_utresult_t utAlldVcnl4020Func(BaseSequentialStream* stream, aos_unittest_t* 
   status |= vcnl4020_lld_writereg(((ut_vcnl4020data_t*)(ut->data))->vcnld, VCNL4020_LLD_REGADDR_INTCTRL, VCNL4020_LLD_INTCTRLREG_THRES_EN, ((ut_vcnl4020data_t*)(ut->data))->timeout);
   do {
     // read proximity data, interrupt event information and interrupt status
-    const eventmask_t emask = chEvtWaitOneTimeout(EVENT_MASK(INTERRUPT_EVENT_ID), LL_US2ST(10*MICROSECONDS_PER_MILLISECOND));
+    const eventmask_t emask = chEvtWaitOneTimeout(EVENT_MASK(INTERRUPT_EVENT_ID), TIME_US2I(10*MICROSECONDS_PER_MILLISECOND));
     const eventflags_t eflags = chEvtGetAndClearFlags(&event_listener);
     status |= vcnl4020_lld_readprox(((ut_vcnl4020data_t*)(ut->data))->vcnld, &reg_16[0], ((ut_vcnl4020data_t*)(ut->data))->timeout);
     status |= vcnl4020_lld_readreg(((ut_vcnl4020data_t*)(ut->data))->vcnld, VCNL4020_LLD_REGADDR_INTSTATUS, &reg_8[2], ((ut_vcnl4020data_t*)(ut->data))->timeout);

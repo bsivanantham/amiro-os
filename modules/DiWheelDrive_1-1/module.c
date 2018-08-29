@@ -29,14 +29,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /**
  * @brief   Interrupt service routine callback for I/O interrupt signals.
  *
- * @param   extp      EXT driver to handle the ISR.
- * @param   channel   Channel on which the interrupt was encountered.
+ * @param   args      Channel on which the interrupt was encountered.
  */
-static void _moduleIsrCallback(EXTDriver* extp, expchannel_t channel) {
-  (void)extp;
-
+static void _modulePalIsrCallback(void *args) {
   chSysLockFromISR();
-  chEvtBroadcastFlagsI(&aos.events.io, (1 << channel));
+  chEvtBroadcastFlagsI(&aos.events.io, (1 << (*(uint16_t*)args)));
   chSysUnlockFromISR();
 
   return;
@@ -56,85 +53,92 @@ CANConfig moduleHalCanConfig = {
   /* btr  */ CAN_BTR_SJW(1) | CAN_BTR_TS2(2) | CAN_BTR_TS1(13) | CAN_BTR_BRP(1),
 };
 
-EXTConfig moduleHalExtConfig = {
-  /* channel configrations */ {
-    /* channel  0 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
-    },
+aos_interrupt_cfg_t moduleIntConfig[10] = {
     /* channel  1 */ { // SYS_INT_N/SYS_SYNC_N: automatic interrupt on event
-      /* mode     */ EXT_MODE_GPIOC | EXT_CH_MODE_BOTH_EDGES | EXT_CH_MODE_AUTOSTART,
-      /* callback */ _moduleIsrCallback,
+      /* port     */ GPIOC,
+      /* pad      */ GPIOC_SYS_INT_N,
+      /* flags    */ AOS_INTERRUPT_AUTOSTART,
+      /* mode     */ PAL_EVENT_MODE_BOTH_EDGES,
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 1,
     },
     /* channel  2 */ { // SYS_WARMRST_N: automatic interrupt when activated
-      /* mode     */ EXT_MODE_GPIOD | EXT_CH_MODE_FALLING_EDGE | EXT_CH_MODE_AUTOSTART,
-      /* callback */ _moduleIsrCallback,
+      /* port     */ GPIOD,
+      /* pad      */ GPIOD_SYS_WARMRST_N,
+      /* flags    */ AOS_INTERRUPT_AUTOSTART,
+      /* mode     */ PAL_EVENT_MODE_FALLING_EDGE,
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 2,
     },
     /* channel  3 */ { // PATH_DCSTAT: must be enabled explicitely when charging is in progress to detect unexpected voltage drop
-      /* mode     */ EXT_MODE_GPIOC | EXT_CH_MODE_FALLING_EDGE,
-      /* callback */ _moduleIsrCallback,
-    },
-    /* channel  4 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
+      /* port     */ GPIOC,
+      /* pad      */ GPIOC_PATH_DCSTAT,
+      /* flags    */ 0,
+      /* mode     */ PAL_EVENT_MODE_FALLING_EDGE,
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 3,
     },
     /* channel  5 */ { // COMPASS_DRDY: must be enabled explicitely
-      /* mode     */ EXT_MODE_GPIOB | APAL2CH_EDGE(HMC5883L_LLD_INT_EDGE),
-      /* callback */ _moduleIsrCallback,
-    },
-    /* channel  6 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
-    },
-    /* channel  7 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
+      /* port     */ GPIOB,
+      /* pad      */ GPIOB_COMPASS_DRDY,
+      /* flags    */ 0,
+      /* mode     */ APAL2CH_EDGE(HMC5883L_LLD_INT_EDGE),
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 4,
     },
     /* channel  8 */ { // SYS_PD_N: automatic interrupt when activated
-      /* mode     */ EXT_MODE_GPIOC | EXT_CH_MODE_FALLING_EDGE | EXT_CH_MODE_AUTOSTART,
-      /* callback */ _moduleIsrCallback,
+      /* port     */ GPIOC,
+      /* pad      */ GPIOC_SYS_PD_N,
+      /* flags    */ AOS_INTERRUPT_AUTOSTART,
+      /* mode     */ PAL_EVENT_MODE_FALLING_EDGE,
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 5,
     },
     /* channel  9 */ { // SYS_REG_EN: automatic interrupt when activated
-      /* mode     */ EXT_MODE_GPIOC | EXT_CH_MODE_FALLING_EDGE | EXT_CH_MODE_AUTOSTART,
-      /* callback */ _moduleIsrCallback,
-    },
-    /* channel 10 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
-    },
-    /* channel 11 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
+      /* port     */ GPIOC,
+      /* pad      */ GPIOC_SYS_REG_EN,
+      /* flags    */ AOS_INTERRUPT_AUTOSTART,
+      /* mode     */ PAL_EVENT_MODE_FALLING_EDGE,
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 6,
     },
     /* channel 12 */ { // IR_INT: must be enabled explicitely
-      /* mode     */ EXT_MODE_GPIOB | APAL2CH_EDGE(VCNL4020_LLD_INT_EDGE),
-      /* callback */ _moduleIsrCallback,
+      /* port     */ GPIOB,
+      /* pad      */ GPIOB_IR_INT,
+      /* flags    */ 0,
+      /* mode     */ APAL2CH_EDGE(VCNL4020_LLD_INT_EDGE),
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 7,
     },
     /* channel 13 */ { // GYRO_DRDY: must be enabled explicitely
-      /* mode     */ EXT_MODE_GPIOB | APAL2CH_EDGE(L3G4200D_LLD_INT_EDGE),
-      /* callback */ _moduleIsrCallback,
+      /* port     */ GPIOB,
+      /* pad      */ GPIOB_GYRO_DRDY,
+      /* flags    */ 0,
+      /* mode     */ APAL2CH_EDGE(L3G4200D_LLD_INT_EDGE),
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 8,
     },
     /* channel 14 */ { // SYS_UART_UP: automatic interrupt on event
-      /* mode     */ EXT_MODE_GPIOB | EXT_CH_MODE_BOTH_EDGES | EXT_CH_MODE_AUTOSTART,
-      /* callback */ _moduleIsrCallback,
+      /* port     */ GPIOB,
+      /* pad      */ GPIOB_SYS_UART_UP,
+      /* flags    */ AOS_INTERRUPT_AUTOSTART,
+      /* mode     */ PAL_EVENT_MODE_BOTH_EDGES,
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 9,
     },
     /* channel 15 */ { // ACCEL_INT_N: must be enabled explicitely
-      /* mode     */ EXT_MODE_GPIOB | APAL2CH_EDGE(LIS331DLH_LLD_INT_EDGE),
-      /* callback */ _moduleIsrCallback,
+      /* port     */ GPIOB,
+      /* pad      */ GPIOB_ACCEL_INT_N,
+      /* flags    */ 0,
+      /* mode     */ APAL2CH_EDGE(LIS331DLH_LLD_INT_EDGE),
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 10,
     },
-    /* channel 16 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
-    },
-    /* channel 17 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
-    },
-    /* channel 18 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
-    },
-  },
+};
+
+aos_interrupt_driver_t moduleIntDriver = {
+  /* config     */ NULL,
+  /* interrupts */ 10,
 };
 
 I2CConfig moduleHalI2cCompassConfig = {
@@ -199,6 +203,7 @@ SerialConfig moduleHalProgIfConfig = {
 };
 
 SPIConfig moduleHalSpiAccelerometerConfig = {
+  /* circular buffer mode         */ false,
   /* callback function pointer    */ NULL,
   /* chip select line port        */ GPIOC,
   /* chip select line pad number  */ GPIOC_ACCEL_SS_N,
@@ -207,6 +212,7 @@ SPIConfig moduleHalSpiAccelerometerConfig = {
 };
 
 SPIConfig moduleHalSpiGyroscopeConfig = {
+  /* circular buffer mode         */ false,
   /* callback function pointer    */ NULL,
   /* chip select line port        */ GPIOC,
   /* chip select line pad number  */ GPIOC_GYRO_SS_N,
@@ -511,14 +517,15 @@ static int _utShellCmdCb_AlldHmc5883l(BaseSequentialStream* stream, int argc, ch
 {
   (void)argc;
   (void)argv;
-  extChannelEnable(&MODULE_HAL_EXT, MODULE_GPIO_EXTCHANNEL_COMPASSDRDY);
+  aosIntEnable(&moduleIntDriver, MODULE_GPIO_INT_COMPASSDRDY);
   aosUtRun(stream, &moduleUtAlldHmc5883l, NULL);
+  aosIntDisable(&moduleIntDriver, MODULE_GPIO_INT_COMPASSDRDY);
   return AOS_OK;
 }
 static ut_hmc5883ldata_t _utHmc5883lData = {
   /* HMC driver   */ &moduleLldCompass,
   /* event source */ &aos.events.io,
-  /* event flags  */ (1 << MODULE_GPIO_EXTCHANNEL_COMPASSDRDY),
+  /* event flags  */ (1 << MODULE_GPIO_INT_COMPASSDRDY),
   /* timeout      */ MICROSECONDS_PER_SECOND,
 };
 aos_unittest_t moduleUtAlldHmc5883l = {
@@ -564,17 +571,18 @@ static int _utShellCmdCb_AlldL3g4200d(BaseSequentialStream* stream, int argc, ch
 {
   (void)argc;
   (void)argv;
-  extChannelEnable(&MODULE_HAL_EXT, MODULE_GPIO_EXTCHANNEL_GYRODRDY);
+  aosIntEnable(&moduleIntDriver, MODULE_GPIO_INT_GYRODRDY);
   spiStart(((ut_l3g4200ddata_t*)moduleUtAlldL3g4200d.data)->l3gd->spid, ((ut_l3g4200ddata_t*)moduleUtAlldL3g4200d.data)->spiconf);
   aosUtRun(stream, &moduleUtAlldL3g4200d, NULL);
   spiStop(((ut_l3g4200ddata_t*)moduleUtAlldL3g4200d.data)->l3gd->spid);
+  aosIntDisable(&moduleIntDriver, MODULE_GPIO_INT_GYRODRDY);
   return AOS_OK;
 }
 static ut_l3g4200ddata_t _utL3g4200dData = {
   /* driver            */ &moduleLldGyroscope,
   /* SPI configuration */ &moduleHalSpiGyroscopeConfig,
   /* event source */ &aos.events.io,
-  /* event flags  */ (1 << MODULE_GPIO_EXTCHANNEL_GYRODRDY),
+  /* event flags  */ (1 << MODULE_GPIO_INT_GYRODRDY),
 };
 aos_unittest_t moduleUtAlldL3g4200d = {
   /* name           */ "L3G4200D",
@@ -613,17 +621,18 @@ static int _utShellCmdCb_AlldLis331dlh(BaseSequentialStream* stream, int argc, c
 {
   (void)argc;
   (void)argv;
-  extChannelEnable(&MODULE_HAL_EXT, MODULE_GPIO_EXTCHANNEL_ACCELINT);
+  aosIntEnable(&moduleIntDriver, MODULE_GPIO_INT_ACCELINT);
   spiStart(((ut_lis331dlhdata_t*)moduleUtAlldLis331dlh.data)->lisd->spid, ((ut_lis331dlhdata_t*)moduleUtAlldLis331dlh.data)->spiconf);
   aosUtRun(stream, &moduleUtAlldLis331dlh, NULL);
   spiStop(((ut_lis331dlhdata_t*)moduleUtAlldLis331dlh.data)->lisd->spid);
+  aosIntDisable(&moduleIntDriver, MODULE_GPIO_INT_ACCELINT);
   return AOS_OK;
 }
 static ut_lis331dlhdata_t _utLis331dlhData = {
   /* driver            */ &moduleLldAccelerometer,
   /* SPI configuration */ &moduleHalSpiAccelerometerConfig,
   /* event source */ &aos.events.io,
-  /* event flags  */ (1 << MODULE_GPIO_EXTCHANNEL_ACCELINT),
+  /* event flags  */ (1 << MODULE_GPIO_INT_ACCELINT),
 };
 aos_unittest_t moduleUtAlldLis331dlh = {
   /* name           */ "LIS331DLH",
@@ -739,7 +748,7 @@ static int _utShellCmdCb_AlldVcnl4020(BaseSequentialStream* stream, int argc, ch
     _utAlldVcnl4020_disableInterrupt(((ut_vcnl4020data_t*)moduleUtAlldVcnl4020.data)->vcnld);
     pca9544a_lld_setchannel(&moduleLldI2cMultiplexer, PCA9544A_LLD_CH3, ((ut_vcnl4020data_t*)moduleUtAlldVcnl4020.data)->timeout);
     _utAlldVcnl4020_disableInterrupt(((ut_vcnl4020data_t*)moduleUtAlldVcnl4020.data)->vcnld);
-    extChannelEnable(&MODULE_HAL_EXT, MODULE_GPIO_EXTCHANNEL_IRINT);
+    aosIntEnable(&moduleIntDriver, MODULE_GPIO_INT_IRINT);
     switch (sensor) {
       case FL:
         pca9544a_lld_setchannel(&moduleLldI2cMultiplexer, PCA9544A_LLD_CH3, ((ut_vcnl4020data_t*)moduleUtAlldVcnl4020.data)->timeout);
@@ -760,6 +769,7 @@ static int _utShellCmdCb_AlldVcnl4020(BaseSequentialStream* stream, int argc, ch
       default:
         break;
     }
+    aosIntDisable(&moduleIntDriver, MODULE_GPIO_INT_IRINT);
     return AOS_OK;
   }
   // print help
@@ -779,7 +789,7 @@ static ut_vcnl4020data_t _utVcnl4020Data = {
   /* driver       */ &moduleLldProximity,
   /* timeout      */ MICROSECONDS_PER_SECOND,
   /* event source */ &aos.events.io,
-  /* event flags  */ (1 << MODULE_GPIO_EXTCHANNEL_IRINT),
+  /* event flags  */ (1 << MODULE_GPIO_INT_IRINT),
 };
 aos_unittest_t moduleUtAlldVcnl4020 = {
   /* name           */ "VCNL4020",

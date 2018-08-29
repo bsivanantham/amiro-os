@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <amiro-lld.h>
 #include <aos_shell.h>
 #include <aos_time.h>
+#include <aos_interrupts.h>
 #include <chprintf.h>
 
 /**
@@ -190,7 +191,7 @@ extern "C" {
   void aosSysShutdownInit(aos_shutdown_t shutdown);
   void aosSysStop(void);
   void aosSysDeinit(void);
-  void aosSysShutdownFinal(EXTDriver* extDrv, aos_shutdown_t shutdown);
+  void aosSysShutdownFinal(aos_interrupt_driver_t* intDrv, aos_shutdown_t shutdown);
 #ifdef __cplusplus
 }
 #endif

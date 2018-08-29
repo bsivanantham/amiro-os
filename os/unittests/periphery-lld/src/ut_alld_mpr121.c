@@ -135,7 +135,7 @@ aos_utresult_t utAlldMpr121Func(BaseSequentialStream* stream, aos_unittest_t* ut
   do {
     aosSysGetUptime(&tcurrent);
     const aos_timestamp_t ttimeout = MICROSECONDS_PER_SECOND - ((tcurrent - tstart) % MICROSECONDS_PER_SECOND);
-    const eventmask_t emask = chEvtWaitOneTimeout(EVENT_MASK(INTERRUPT_EVENT_ID), LL_US2ST(ttimeout));
+    const eventmask_t emask = chEvtWaitOneTimeout(EVENT_MASK(INTERRUPT_EVENT_ID), TIME_US2I(ttimeout));
     const eventflags_t eflags = chEvtGetAndClearFlags(&event_listener);
     if (emask == EVENT_MASK(INTERRUPT_EVENT_ID) && eflags == ((ut_mpr121data_t*)ut->data)->evtflags) {
       // interrupt detected

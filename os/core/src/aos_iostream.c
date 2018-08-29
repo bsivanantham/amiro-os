@@ -121,6 +121,7 @@ static size_t _channelreadt(void *instance, uint8_t *bp, size_t n, systime_t tim
  * @brief   Virtual methods table for all AosIOChannel objects.
  */
 static const struct AosIOChannelVMT _channelvmt = {
+  (size_t) 0,
   _channelwrite,
   _channelread,
   _channelput,
@@ -200,6 +201,7 @@ static msg_t _streamget(void *instance)
  * @brief   Virtual methods table for all AosIOStream objects.
  */
 static const struct AosIOStreamVMT _streamvmt = {
+  (size_t) 0,
   _streamwrite,
   _stremread,
   _streamput,

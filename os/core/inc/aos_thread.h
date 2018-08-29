@@ -70,22 +70,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /**
  * @brief   Maximum timeframe that can be slept in system ticks.
  */
-#define AOS_THD_MAX_SLEEP_ST    TIME_MAXIMUM
+#define AOS_THD_MAX_SLEEP_ST    TIME_MAX_INTERVAL
 
 /**
  * @brief   Maximum timeframe that can be slept in seconds.
  */
-#define AOS_THD_MAX_SLEEP_S     (ST2S(AOS_THD_MAX_SLEEP_ST) - 1)
+#define AOS_THD_MAX_SLEEP_S     (TIME_I2S(AOS_THD_MAX_SLEEP_ST) - 1)
 
 /**
  * @brief   Maximum timeframe that can be slept in milliseconds.
  */
-#define AOS_THD_MAX_SLEEP_MS    (ST2MS(AOS_THD_MAX_SLEEP_ST) - 1)
+#define AOS_THD_MAX_SLEEP_MS    (TIME_I2MS(AOS_THD_MAX_SLEEP_ST) - 1)
 
 /**
  * @brief   Maximum timeframe that can be slept in microseconds.
  */
-#define AOS_THD_MAX_SLEEP_US    (ST2US(AOS_THD_MAX_SLEEP_ST) - 1)
+#define AOS_THD_MAX_SLEEP_US    (TIME_I2US(AOS_THD_MAX_SLEEP_ST) - 1)
 
 #ifdef __cplusplus
 extern "C" {

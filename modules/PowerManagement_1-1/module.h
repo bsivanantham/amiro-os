@@ -62,6 +62,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 /*===========================================================================*/
 #include <hal.h>
+#include <aos_interrupts.h>
 
 /**
  * @brief   ADC driver for reading the system voltage.
@@ -84,14 +85,15 @@ extern ADCConversionGroup moduleHalAdcVsysConversionGroup;
 extern CANConfig moduleHalCanConfig;
 
 /**
- * @brief   Interrupt driver to use.
+ * @brief   Interrupt driver (PAL).
  */
-#define MODULE_HAL_EXT                          EXTD1
+
+extern aos_interrupt_driver_t moduleIntDriver;
 
 /**
- * @brief   Interrupt driver configuration.
+ * @brief   Interrupt driver config.
  */
-extern EXTConfig moduleHalExtConfig;
+extern aos_interrupt_cfg_t moduleIntConfig[14];
 
 /**
  * @brief   I2C driver to access multiplexer, proximity sensors 1 to 4, power monitors for VIO1.8 and VIO 3.3, and fuel gauge (rear battery).
@@ -156,72 +158,72 @@ extern SerialConfig moduleHalProgIfConfig;
 /**
  * @brief   Interrupt channel for the IR_INT1 and CHARGE_STAT1A signals.
  */
-#define MODULE_GPIO_EXTCHANNEL_IRINT1           ((expchannel_t)0)
+#define MODULE_GPIO_INT_IRINT1           ((uint8_t)1)
 
 /**
  * @brief   Interrupt channel for the GAUGE_BATLOW1 signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_GAUGEBATLOW1     ((expchannel_t)1)
+#define MODULE_GPIO_INT_GAUGEBATLOW1     ((uint8_t)2)
 
 /**
  * @brief   Interrupt channel for the GAUGE_BATGD1 signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_GAUGEBATGD1      ((expchannel_t)2)
+#define MODULE_GPIO_INT_GAUGEBATGD1      ((uint8_t)3)
 
 /**
  * @brief   Interrupt channel for the SYS_UART_DN signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_SYSUARTDN        ((expchannel_t)3)
+#define MODULE_GPIO_INT_SYSUARTDN        ((uint8_t)4)
 
 /**
  * @brief   Interrupt channel for the IR_INT2 and CHARGE_STAT2A signals.
  */
-#define MODULE_GPIO_EXTCHANNEL_IRINT2           ((expchannel_t)4)
+#define MODULE_GPIO_INT_IRINT2           ((uint8_t)5)
 
 /**
  * @brief   Interrupt channel for the TOUCH_INT signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_TOUCHINT         ((expchannel_t)5)
+#define MODULE_GPIO_INT_TOUCHINT         ((uint8_t)6)
 
 /**
  * @brief   Interrupt channel for the GAUGE_BATLOW2 signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_GAUGEBATLOW2     ((expchannel_t)6)
+#define MODULE_GPIO_INT_GAUGEBATLOW2     ((uint8_t)7)
 
 /**
  * @brief   Interrupt channel for the GAUGE_BATGD2 signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_GAUGEBATGD2      ((expchannel_t)7)
+#define MODULE_GPIO_INT_GAUGEBATGD2      ((uint8_t)8)
 
 /**
  * @brief   Interrupt channel for the PATH_DC signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_PATHDC           ((expchannel_t)8)
+#define MODULE_GPIO_INT_PATHDC           ((uint8_t)9)
 
 /**
  * @brief   Interrupt channel for the SYS_SPI_DIR signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_SYSSPIDIR        ((expchannel_t)9)
+#define MODULE_GPIO_INT_SYSSPIDIR        ((uint8_t)10)
 
 /**
  * @brief   Interrupt channel for the SYS_SYNC signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_SYSSYNC          ((expchannel_t)12)
+#define MODULE_GPIO_INT_SYSSYNC          ((uint8_t)11)
 
 /**
  * @brief   Interrupt channel for the SYS_PD signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_SYSPD            ((expchannel_t)13)
+#define MODULE_GPIO_INT_SYSPD            ((uint8_t)12)
 
 /**
  * @brief   Interrupt channel for the SYS_WARMRST signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_SYSWARMRST       ((expchannel_t)14)
+#define MODULE_GPIO_INT_SYSWARMRST       ((uint8_t)13)
 
 /**
  * @brief   Interrupt channel for the SYS_UART_UP signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_SYSUARTUP        ((expchannel_t)15)
+#define MODULE_GPIO_INT_SYSUARTUP        ((uint8_t)14)
 
 /**
  * @brief   SYS_REG_EN output signal GPIO.
@@ -355,72 +357,72 @@ extern apalGpio_t moduleGpioChargeEn2;
 /**
  * @brief   Event flag to be set on a IR_INT1 / CHARGE_STAT1A interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_IRINT1           ((eventflags_t)1 << MODULE_GPIO_EXTCHANNEL_IRINT1)
+#define MODULE_OS_IOEVENTFLAGS_IRINT1           ((eventflags_t)1 << MODULE_GPIO_INT_IRINT1)
 
 /**
  * @brief   Event flag to be set on a GAUGE_BATLOW1 interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_GAUGEBATLOW1     ((eventflags_t)1 << MODULE_GPIO_EXTCHANNEL_GAUGEBATLOW1)
+#define MODULE_OS_IOEVENTFLAGS_GAUGEBATLOW1     ((eventflags_t)1 << MODULE_GPIO_INT_GAUGEBATLOW1)
 
 /**
  * @brief   Event flag to be set on a GAUGE_BATGD1 interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_GAUGEBATGD1      ((eventflags_t)1 << MODULE_GPIO_EXTCHANNEL_GAUGEBATGD1)
+#define MODULE_OS_IOEVENTFLAGS_GAUGEBATGD1      ((eventflags_t)1 << MODULE_GPIO_INT_GAUGEBATGD1)
 
 /**
  * @brief   Event flag to be set on a SYS_UART_DN interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_SYSUARTDN        ((eventflags_t)1 << MODULE_GPIO_EXTCHANNEL_SYSUARTDN)
+#define MODULE_OS_IOEVENTFLAGS_SYSUARTDN        ((eventflags_t)1 << MODULE_GPIO_INT_SYSUARTDN)
 
 /**
  * @brief   Event flag to be set on a IR_INT2 / CHARGE_STAT2A interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_IRINT2           ((eventflags_t)1 << MODULE_GPIO_EXTCHANNEL_IRINT2)
+#define MODULE_OS_IOEVENTFLAGS_IRINT2           ((eventflags_t)1 << MODULE_GPIO_INT_IRINT2)
 
 /**
  * @brief   Event flag to be set on a TOUCH_INT interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_TOUCHINT         ((eventflags_t)1 << MODULE_GPIO_EXTCHANNEL_TOUCHINT)
+#define MODULE_OS_IOEVENTFLAGS_TOUCHINT         ((eventflags_t)1 << MODULE_GPIO_INT_TOUCHINT)
 
 /**
  * @brief   Event flag to be set on a GAUGE_BATLOW2 interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_GAUGEBATLOW2     ((eventflags_t)1 << MODULE_GPIO_EXTCHANNEL_GAUGEBATLOW2)
+#define MODULE_OS_IOEVENTFLAGS_GAUGEBATLOW2     ((eventflags_t)1 << MODULE_GPIO_INT_GAUGEBATLOW2)
 
 /**
  * @brief   Event flag to be set on a GAUGE_BATGD2 interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_GAUGEBATGD2      ((eventflags_t)1 << MODULE_GPIO_EXTCHANNEL_GAUGEBATGD2)
+#define MODULE_OS_IOEVENTFLAGS_GAUGEBATGD2      ((eventflags_t)1 << MODULE_GPIO_INT_GAUGEBATGD2)
 
 /**
  * @brief   Event flag to be set on a PATH_DC interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_PATHDC           ((eventflags_t)1 << MODULE_GPIO_EXTCHANNEL_PATHDC)
+#define MODULE_OS_IOEVENTFLAGS_PATHDC           ((eventflags_t)1 << MODULE_GPIO_INT_PATHDC)
 
 /**
  * @brief   Event flag to be set on a SYS_SPI_DIR interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_SYSSPIDIR        ((eventflags_t)1 << MODULE_GPIO_EXTCHANNEL_SYSSPIDIR)
+#define MODULE_OS_IOEVENTFLAGS_SYSSPIDIR        ((eventflags_t)1 << MODULE_GPIO_INT_SYSSPIDIR)
 
 /**
  * @brief   Event flag to be set on a SYS_SYNC interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_SYSSYNC          ((eventflags_t)1 << MODULE_GPIO_EXTCHANNEL_SYSSYNC)
+#define MODULE_OS_IOEVENTFLAGS_SYSSYNC          ((eventflags_t)1 << MODULE_GPIO_INT_SYSSYNC)
 
 /**
  * @brief   Event flag to be set on a SYS_PD interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_SYSPD            ((eventflags_t)1 << MODULE_GPIO_EXTCHANNEL_SYSPD)
+#define MODULE_OS_IOEVENTFLAGS_SYSPD            ((eventflags_t)1 << MODULE_GPIO_INT_SYSPD)
 
 /**
  * @brief   Event flag to be set on a SYS_WARMRST interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_SYSWARMRST       ((eventflags_t)1 << MODULE_GPIO_EXTCHANNEL_SYSWARMRST)
+#define MODULE_OS_IOEVENTFLAGS_SYSWARMRST       ((eventflags_t)1 << MODULE_GPIO_INT_SYSWARMRST)
 
 /**
  * @brief   Event flag to be set on a SYS_UART_UP interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_SYSUARTUP        ((eventflags_t)1 << MODULE_GPIO_EXTCHANNEL_SYSUARTUP)
+#define MODULE_OS_IOEVENTFLAGS_SYSUARTUP        ((eventflags_t)1 << MODULE_GPIO_INT_SYSUARTUP)
 
 #if (AMIROOS_CFG_SHELL_ENABLE == true) || defined(__DOXYGEN__)
 /**

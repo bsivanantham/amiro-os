@@ -25,12 +25,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #if (AMIROOS_CFG_TESTS_ENABLE == true)
 #include <ch_test.h>
+#include <rt_test_root.h>
 #endif
 
 /**
  * @brief   Period of the system timer.
  */
-#define SYSTIMER_PERIOD               (TIME_MAXIMUM - CH_CFG_ST_TIMEDELTA)
+#define SYSTIMER_PERIOD               (TIME_MAX_INTERVAL - CH_CFG_ST_TIMEDELTA)
 
 /**
  * @brief   Width of the printable system info text.
@@ -577,7 +578,7 @@ static int _shellcmd_kerneltestcb(BaseSequentialStream* stream, int argc, char* 
 
   tprio_t prio = chThdGetPriorityX();
   chThdSetPriority(HIGHPRIO - 5); // some tests increase priorirty by 5, so this is the maximum priority permitted
-  msg_t retval = test_execute(stream);
+  msg_t retval = test_execute(stream, &rt_test_suite);
   chThdSetPriority(prio);
 
   return retval;
@@ -590,12 +591,12 @@ static int _shellcmd_kerneltestcb(BaseSequentialStream* stream, int argc, char* 
  * @param[in] extp      Pointer to the interrupt driver object.
  * @param[in] channel   Interrupt channel identifier.
  */
-static void _signalPdCallback(EXTDriver* extp, expchannel_t channel)
+static void _signalPdCallback(void *args)
 {
-  (void)extp;
+  (void)args;
 
   chSysLockFromISR();
-  chEvtBroadcastFlagsI(&aos.events.io, (1 << channel));
+  chEvtBroadcastFlagsI(&aos.events.io, 0);
   chSysUnlockFromISR();
 
   return;
@@ -607,13 +608,13 @@ static void _signalPdCallback(EXTDriver* extp, expchannel_t channel)
  * @param[in] extp      Pointer to the interrupt driver object.
  * @param[in] channel   Interrupt channel identifier.
  */
-static void _signalSyncCallback(EXTDriver* extp, expchannel_t channel)
+static void _signalSyncCallback(void *args)
 {
-  (void)extp;
+  (void)args;
 
 #if (AMIROOS_CFG_SSSP_MASTER == true)
   chSysLockFromISR();
-  chEvtBroadcastFlagsI(&aos.events.io, (1 << channel));
+  chEvtBroadcastFlagsI(&aos.events.io, 0);
   chSysUnlockFromISR();
 #else
   apalControlGpioState_t s_state;
@@ -643,7 +644,7 @@ static void _signalSyncCallback(EXTDriver* extp, expchannel_t channel)
     }
   }
   // broadcast event
-  chEvtBroadcastFlagsI(&aos.events.io, (1 << channel));
+  chEvtBroadcastFlagsI(&aos.events.io, 0);
   chSysUnlockFromISR();
 #endif
 
@@ -663,7 +664,7 @@ static void _uptimeCallback(void* par)
   // read current time in system ticks
   register const systime_t st = chVTGetSystemTimeX();
   // update the uptime variables
-  _uptime += LL_ST2US(st - _synctime);
+  _uptime += TIME_I2US(st - _synctime);
   _synctime = st;
   // enable the timer again
   chVTSetI(&_systimer, SYSTIMER_PERIOD, &_uptimeCallback, NULL);
@@ -695,12 +696,12 @@ static void _sysSyncTimerCallback(void* par)
     // reconfigure the timer precisely, because the logically falling edge (next interrupt) snychronizes the system time
     _syssynctime += AMIROOS_CFG_SSSP_SYSSYNCPERIOD;
     aosSysGetUptimeX(&uptime);
-    chVTSetI(&_syssynctimer, LL_US2ST(_syssynctime - uptime), _sysSyncTimerCallback, NULL);
+    chVTSetI(&_syssynctimer, TIME_US2I(_syssynctime - uptime), _sysSyncTimerCallback, NULL);
   }
   // if S was toggled from on to off
   else /* if (s_state == APAL_GPIO_OFF) */ {
     // reconfigure the timer (lazy)
-    chVTSetI(&_syssynctimer, LL_US2ST(AMIROOS_CFG_SSSP_SYSSYNCPERIOD / 2), _sysSyncTimerCallback, NULL);
+    chVTSetI(&_syssynctimer, TIME_US2I(AMIROOS_CFG_SSSP_SYSSYNCPERIOD / 2), _sysSyncTimerCallback, NULL);
   }
   chSysUnlockFromISR();
 
@@ -743,9 +744,12 @@ void aosSysInit(void)
   chEvtObjectInit(&aos.events.os);
 
   // setup external interrupt system
-  moduleHalExtConfig.channels[moduleSsspGpioPd.gpio->pad].cb = _signalPdCallback;
-  moduleHalExtConfig.channels[moduleSsspGpioSync.gpio->pad].cb = _signalSyncCallback;
-  extStart(&MODULE_HAL_EXT, &moduleHalExtConfig);
+  aosIntDriverInit(&moduleIntDriver, moduleIntConfig);
+  chSysLock();
+  palSetPadCallbackI(moduleGpioSysPd.port, moduleGpioSysPd.pad, _signalPdCallback, NULL);
+  palSetPadCallbackI(moduleGpioSysSync.port, moduleGpioSysSync.pad, _signalSyncCallback, NULL);
+  chSysUnlock();
+  aosIntDriverStart(&moduleIntDriver);
 
 #if (AMIROOS_CFG_SHELL_ENABLE == true)
   // init shell
@@ -784,7 +788,7 @@ inline void aosSysStart(void)
     aos_timestamp_t t;
     aosSysGetUptimeX(&t);
     t = AMIROOS_CFG_SSSP_SYSSYNCPERIOD - (t % AMIROOS_CFG_SSSP_SYSSYNCPERIOD);
-    chVTSetI(&_syssynctimer, LL_US2ST((t > (AMIROOS_CFG_SSSP_SYSSYNCPERIOD / 2)) ? (t - (AMIROOS_CFG_SSSP_SYSSYNCPERIOD / 2)) : (t + (AMIROOS_CFG_SSSP_SYSSYNCPERIOD / 2))), _sysSyncTimerCallback, NULL);
+    chVTSetI(&_syssynctimer, TIME_US2I((t > (AMIROOS_CFG_SSSP_SYSSYNCPERIOD / 2)) ? (t - (AMIROOS_CFG_SSSP_SYSSYNCPERIOD / 2)) : (t + (AMIROOS_CFG_SSSP_SYSSYNCPERIOD / 2))), _sysSyncTimerCallback, NULL);
     chSysUnlock();
   }
 #endif
@@ -861,7 +865,7 @@ inline void aosSysGetUptimeX(aos_timestamp_t* ut)
 {
   aosDbgCheck(ut != NULL);
 
-  *ut = _uptime + LL_ST2US(chVTGetSystemTimeX() - _synctime);
+  *ut = _uptime + TIME_I2US(chVTGetSystemTimeX() - _synctime);
 
   return;
 }
@@ -986,14 +990,14 @@ void aosSysDeinit(void)
  * @param[in] extDrv      Pointer to the interrupt driver.
  * @param[in] shutdown    Type of shutdown.
  */
-void aosSysShutdownFinal(EXTDriver* extDrv, aos_shutdown_t shutdown)
+void aosSysShutdownFinal(aos_interrupt_driver_t* intDrv, aos_shutdown_t shutdown)
 {
   // check arguments
-  aosDbgCheck(extDrv != NULL);
+  aosDbgCheck(intDrv != NULL);
   aosDbgCheck(shutdown != AOS_SHUTDOWN_NONE);
 
   // stop external interrupt system
-  extStop(extDrv);
+  aosIntDriverStop(intDrv);
 
   // update the system SSSP stage
   aos.sssp.stage = AOS_SSSP_SHUTDOWN_1_3;

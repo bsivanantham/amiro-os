@@ -366,7 +366,7 @@ aos_shutdown_t _ssspModuleStackInitialization(void)
     if (flags.wfe) {
       // wait for any event to occur
       aosDbgPrintf("WFE...");
-      eventmask = chEvtWaitAnyTimeout(ALL_EVENTS, LL_US2ST(AOS_SYSTEM_SSSP_TIMEOUT));
+      eventmask = chEvtWaitAnyTimeout(ALL_EVENTS, TIME_US2I(AOS_SYSTEM_SSSP_TIMEOUT));
       aosDbgPrintf("\t0x%08X", eventmask);
     } else {
       aosDbgPrintf("WFE skipped");
@@ -483,13 +483,13 @@ aos_shutdown_t _ssspModuleStackInitialization(void)
           flags.wfe_next = false;
 #else
           // set the timeout timer
-          chVTSet(&timerTimeout, LL_US2ST(AOS_SYSTEM_SSSP_TIMEOUT), _ssspTimerCallback, &eventSourceTimeout);
+          chVTSet(&timerTimeout, TIME_US2I(AOS_SYSTEM_SSSP_TIMEOUT), _ssspTimerCallback, &eventSourceTimeout);
           // proceed
           stage = STAGE_3_3_WAITFORFIRSTID;
 #endif
 #else
           // set the timeout timer
-          chVTSet(&timerTimeout, LL_US2ST(AOS_SYSTEM_SSSP_TIMEOUT), _ssspTimerCallback, &eventSourceTimeout);
+          chVTSet(&timerTimeout, TIME_US2I(AOS_SYSTEM_SSSP_TIMEOUT), _ssspTimerCallback, &eventSourceTimeout);
 #endif
         }
 
@@ -515,7 +515,7 @@ aos_shutdown_t _ssspModuleStackInitialization(void)
             flags.wfe_next = false;
 #else
             // set the timeout timer
-            chVTSet(&timerTimeout, LL_US2ST(AOS_SYSTEM_SSSP_TIMEOUT), _ssspTimerCallback, &eventSourceTimeout);
+            chVTSet(&timerTimeout, TIME_US2I(AOS_SYSTEM_SSSP_TIMEOUT), _ssspTimerCallback, &eventSourceTimeout);
             // proceed
             stage = STAGE_3_3_WAITFORFIRSTID;
 #endif
@@ -556,7 +556,7 @@ aos_shutdown_t _ssspModuleStackInitialization(void)
           stage = STAGE_3_3_WAITFORID;
 #else
           // set the delay timer so the UP signal is activated later
-          chVTSet(&timerDelay, LL_US2ST(AMIROOS_CFG_SSSP_SIGNALDELAY), _ssspTimerCallback, &eventSourceDelay);
+          chVTSet(&timerDelay, TIME_US2I(AMIROOS_CFG_SSSP_SIGNALDELAY), _ssspTimerCallback, &eventSourceDelay);
 #endif
         }
 
@@ -597,7 +597,7 @@ aos_shutdown_t _ssspModuleStackInitialization(void)
               // store received ID
               lastid = _deserialize(canRxFrame.data8, 4);
               // restart timeout timer
-              chVTSet(&timerTimeout, LL_US2ST(AOS_SYSTEM_SSSP_TIMEOUT), _ssspTimerCallback, &eventSourceTimeout);
+              chVTSet(&timerTimeout, TIME_US2I(AOS_SYSTEM_SSSP_TIMEOUT), _ssspTimerCallback, &eventSourceTimeout);
               // proceed
               stage = STAGE_3_3_WAITFORIDORSIG;
             } else {
@@ -633,7 +633,7 @@ aos_shutdown_t _ssspModuleStackInitialization(void)
               // store received ID
               lastid = _deserialize(canRxFrame.data8, 4);
               // restart timeout timer
-              chVTSet(&timerTimeout, LL_US2ST(AOS_SYSTEM_SSSP_TIMEOUT), _ssspTimerCallback, &eventSourceTimeout);
+              chVTSet(&timerTimeout, TIME_US2I(AOS_SYSTEM_SSSP_TIMEOUT), _ssspTimerCallback, &eventSourceTimeout);
             } else {
               aosDbgPrintf("ERR: invalid ID\n");
               // abort
@@ -664,7 +664,7 @@ aos_shutdown_t _ssspModuleStackInitialization(void)
             break;
           }
           // set delay timer
-          chVTSet(&timerDelay, LL_US2ST(AMIROOS_CFG_SSSP_SIGNALDELAY), _ssspTimerCallback, &eventSourceDelay);
+          chVTSet(&timerDelay, TIME_US2I(AMIROOS_CFG_SSSP_SIGNALDELAY), _ssspTimerCallback, &eventSourceDelay);
         }
 
         // if a delay event occurred
@@ -678,7 +678,7 @@ aos_shutdown_t _ssspModuleStackInitialization(void)
           aosDbgPrintf("S-\n");
           apalControlGpioSet(&moduleSsspGpioSync, APAL_GPIO_OFF);
           // reset the timeout timer
-          chVTSet(&timerTimeout, LL_US2ST(AOS_SYSTEM_SSSP_TIMEOUT), _ssspTimerCallback, &eventSourceTimeout);
+          chVTSet(&timerTimeout, TIME_US2I(AOS_SYSTEM_SSSP_TIMEOUT), _ssspTimerCallback, &eventSourceTimeout);
           chEvtWaitAnyTimeout(eventListenerTimeout.events, TIME_IMMEDIATE);
           eventmask &= ~(eventListenerTimeout.events);
           // proceed
@@ -707,7 +707,7 @@ aos_shutdown_t _ssspModuleStackInitialization(void)
             aosDbgPrintf("ID (%u)\n", lastid);
 #endif
             // restart timeout timer
-            chVTSet(&timerTimeout, LL_US2ST(AOS_SYSTEM_SSSP_TIMEOUT), _ssspTimerCallback, &eventSourceTimeout);
+            chVTSet(&timerTimeout, TIME_US2I(AOS_SYSTEM_SSSP_TIMEOUT), _ssspTimerCallback, &eventSourceTimeout);
             chEvtWaitAnyTimeout(eventListenerTimeout.events, TIME_IMMEDIATE);
             eventmask &= ~(eventListenerTimeout.events);
           }
@@ -728,7 +728,7 @@ aos_shutdown_t _ssspModuleStackInitialization(void)
           chEvtWaitAnyTimeout(eventListenerTimeout.events, TIME_IMMEDIATE);
           eventmask &= ~(eventListenerTimeout.events);
           //set the delay timer
-          chVTSet(&timerDelay, LL_US2ST(AOS_SYSTEM_SSSP_TIMEOUT), _ssspTimerCallback, &eventSourceDelay);
+          chVTSet(&timerDelay, TIME_US2I(AOS_SYSTEM_SSSP_TIMEOUT), _ssspTimerCallback, &eventSourceDelay);
         }
 
         // if a CAN event was received
@@ -1057,7 +1057,7 @@ int main(void)
 
     aosDbgPrintf("receiving current date/time...\t");
     // receive message
-    if (canReceiveTimeout(&MODULE_HAL_CAN, CAN_ANY_MAILBOX, &frame, LL_US2ST(AOS_SYSTEM_SSSP_TIMEOUT)) == MSG_OK) {
+    if (canReceiveTimeout(&MODULE_HAL_CAN, CAN_ANY_MAILBOX, &frame, TIME_US2I(AOS_SYSTEM_SSSP_TIMEOUT)) == MSG_OK) {
       // validate message
       if (frame.DLC == 8 &&
           frame.RTR == CAN_RTR_DATA &&
@@ -1111,7 +1111,7 @@ int main(void)
   while (shutdown == AOS_SHUTDOWN_NONE) {
     // wait for an event
 #if (AMIROOS_CFG_MAIN_LOOP_TIMEOUT != 0)
-    eventmask = chEvtWaitOneTimeout(ALL_EVENTS, LL_US2ST(AMIROOS_CFG_MAIN_LOOP_TIMEOUT));
+    eventmask = chEvtWaitOneTimeout(ALL_EVENTS, TIME_US2I(AMIROOS_CFG_MAIN_LOOP_TIMEOUT));
 #else
     eventmask = chEvtWaitOne(ALL_EVENTS);
 #endif
@@ -1243,7 +1243,7 @@ int main(void)
 #endif
 
   // finally hand over to bootloader
-  aosSysShutdownFinal(&MODULE_HAL_EXT, shutdown);
+  aosSysShutdownFinal(&moduleIntDriver, shutdown);
 
   /*
    * ##########################################################################

@@ -35,6 +35,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 /*===========================================================================*/
 #include <hal.h>
+#include <aos_interrupts.h>
 
 /**
  * @brief   CAN driver to use.
@@ -47,14 +48,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 extern CANConfig moduleHalCanConfig;
 
 /**
- * @brief   Interrupt driver to use.
+ * @brief   Interrupt driver (PAL).
  */
-#define MODULE_HAL_EXT                          EXTD1
+
+extern aos_interrupt_driver_t moduleIntDriver;
 
 /**
- * @brief   Interrupt driver configuration.
+ * @brief   Interrupt driver config.
  */
-extern EXTConfig moduleHalExtConfig;
+extern aos_interrupt_cfg_t moduleIntConfig[6];
 
 /**
  * @brief   I2C driver to access the EEPROM.
@@ -104,32 +106,32 @@ extern SPIConfig moduleHalSpiLightConfig;
 /**
  * @brief   Interrupt channel for the SYS_SYNC signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_SYSSYNC          ((expchannel_t)2)
+#define MODULE_GPIO_INT_SYSSYNC          ((uint8_t)1)
 
 /**
  * @brief   Interrupt channel for the LASER_OC signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_LASEROC          ((expchannel_t)5)
+#define MODULE_GPIO_INT_LASEROC          ((uint8_t)2)
 
 /**
  * @brief   Interrupt channel for the SYS_UART_DN signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_SYSUARTDN        ((expchannel_t)6)
+#define MODULE_GPIO_INT_SYSUARTDN        ((uint8_t)3)
 
 /**
  * @brief   Interrupt channel for the WL_GDO2 signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_WLGDO2           ((expchannel_t)8)
+#define MODULE_GPIO_INT_WLGDO2           ((uint8_t)4)
 
 /**
  * @brief   Interrupt channel for the WL_GDO0 signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_WLGDO0           ((expchannel_t)9)
+#define MODULE_GPIO_INT_WLGDO0           ((uint8_t)5)
 
 /**
  * @brief   Interrupt channel for the SYS_PD signal.
  */
-#define MODULE_GPIO_EXTCHANNEL_SYSPD            ((expchannel_t)14)
+#define MODULE_GPIO_INT_SYSPD            ((uint8_t)6)
 
 /**
  * @brief   LIGHT_BANK output signal GPIO.
@@ -188,32 +190,32 @@ extern apalGpio_t moduleGpioSysSync;
 /**
  * @brief   Event flag to be set on a LASER_OC interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_LASEROC          ((eventflags_t)(1 << MODULE_GPIO_EXTCHANNEL_LASEROC))
+#define MODULE_OS_IOEVENTFLAGS_LASEROC          ((eventflags_t)(1 << MODULE_GPIO_INT_LASEROC))
 
 /**
  * @brief   Event flag to be set on a SYS_UART_DN interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_SYSUARTDN        ((eventflags_t)(1 << MODULE_GPIO_EXTCHANNEL_SYSUARTDN))
+#define MODULE_OS_IOEVENTFLAGS_SYSUARTDN        ((eventflags_t)(1 << MODULE_GPIO_INT_SYSUARTDN))
 
 /**
  * @brief   Event flag to be set on a WL_GDO2 interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_WLGDO2           ((eventflags_t)(1 << MODULE_GPIO_EXTCHANNEL_WLGDO2))
+#define MODULE_OS_IOEVENTFLAGS_WLGDO2           ((eventflags_t)(1 << MODULE_GPIO_INT_WLGDO2))
 
 /**
  * @brief   Event flag to be set on a WL_GDO0 interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_WLGDO0           ((eventflags_t)(1 << MODULE_GPIO_EXTCHANNEL_WLGDO0))
+#define MODULE_OS_IOEVENTFLAGS_WLGDO0           ((eventflags_t)(1 << MODULE_GPIO_INT_WLGDO0))
 
 /**
  * @brief   Event flag to be set on a SYS_PD interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_SYSPD            ((eventflags_t)(1 << MODULE_GPIO_EXTCHANNEL_SYSPD))
+#define MODULE_OS_IOEVENTFLAGS_SYSPD            ((eventflags_t)(1 << MODULE_GPIO_INT_SYSPD))
 
 /**
  * @brief   Event flag to be set on a SYS_SYNC interrupt.
  */
-#define MODULE_OS_IOEVENTFLAGS_SYSSYNC          ((eventflags_t)(1 << MODULE_GPIO_EXTCHANNEL_SYSSYNC))
+#define MODULE_OS_IOEVENTFLAGS_SYSSYNC          ((eventflags_t)(1 << MODULE_GPIO_INT_SYSSYNC))
 
 #if (AMIROOS_CFG_SHELL_ENABLE == true) || defined(__DOXYGEN__)
 /**

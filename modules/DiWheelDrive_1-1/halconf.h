@@ -1,4 +1,31 @@
 /*
+ * AMiRo-OS is an operating system designed for the Autonomous Mini Robot (AMiRo) platform.
+ * Copyright (C) 2016..2018  Thomas Schöpping et al.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * @file    os/modules/DiWheelDrive/chconf.h
+ * @brief   ChibiOS Configuration file for the DiWheelDrive v1.1 module.
+ * @details Contains the application specific kernel settings.
+ *
+ * @addtogroup config
+ * @details Kernel related settings and hooks.
+ * @{
+ */
+/*
 AMiRo-OS is an operating system designed for the Autonomous Mini Robot (AMiRo) platform.
 Copyright (C) 2016..2018  Thomas Schöpping et al.
 
@@ -62,7 +89,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * @brief   Enables the EXT subsystem.
  */
 #if !defined(HAL_USE_EXT) || defined(__DOXYGEN__)
-#define HAL_USE_EXT                 TRUE
+#define HAL_USE_EXT                 FALSE
 #endif
 
 /**

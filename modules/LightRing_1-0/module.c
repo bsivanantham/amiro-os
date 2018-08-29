@@ -29,14 +29,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /**
  * @brief   Interrupt service routine callback for I/O interrupt signals.
  *
- * @param   extp      EXT driver to handle the ISR.
- * @param   channel   Channel on which the interrupt was encountered.
+ * @param   args      Channel on which the interrupt was encountered.
  */
-static void _moduleIsrCallback(EXTDriver* extp, expchannel_t channel) {
-  (void)extp;
-
+static void _modulePalIsrCallback(void *args) {
   chSysLockFromISR();
-  chEvtBroadcastFlagsI(&aos.events.io, (1 << channel));
+  chEvtBroadcastFlagsI(&aos.events.io, (1 << (*(uint16_t*)args)));
   chSysUnlockFromISR();
 
   return;
@@ -56,85 +53,60 @@ CANConfig moduleHalCanConfig = {
   /* btr  */ CAN_BTR_SJW(1) | CAN_BTR_TS2(2) | CAN_BTR_TS1(13) | CAN_BTR_BRP(1),
 };
 
-EXTConfig moduleHalExtConfig = {
-  /* channel configrations */ {
-    /* channel  0 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
+aos_interrupt_cfg_t moduleIntConfig[6] = {
+    /* channel  1 */ { // SYS_INT_N/SYS_SYNC_N: automatic interrupt on event
+      /* port     */ GPIOD,
+      /* pad      */ GPIOD_SYS_INT_N,
+      /* flags    */ AOS_INTERRUPT_AUTOSTART,
+      /* mode     */ PAL_EVENT_MODE_BOTH_EDGES,
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 1,
     },
-    /* channel  1 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
+    /* channel  2 */ { // LASER_OC_N: must be enabled explicitely
+      /* port     */ GPIOB,
+      /* pad      */ GPIOB_LASER_OC_N,
+      /* flags    */ 0,
+      /* mode     */ PAL_EVENT_MODE_FALLING_EDGE,
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 2,
     },
-    /* channel  2 */ { // SYS_SYNC_N: automatic interrupt on event
-      /* mode     */ EXT_MODE_GPIOD | EXT_CH_MODE_BOTH_EDGES | EXT_CH_MODE_AUTOSTART,
-      /* callback */ _moduleIsrCallback
+    /* channel  3 */ { // SYS_UART_DN: automatic interrupt on event
+      /* port     */ GPIOB,
+      /* pad      */ GPIOB_SYS_UART_DN,
+      /* flags    */ AOS_INTERRUPT_AUTOSTART,
+      /* mode     */ PAL_EVENT_MODE_BOTH_EDGES,
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 3,
     },
-    /* channel  3 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
+    /* channel  4 */ { // WL_GDO0: must be enabled explicitely
+      /* port     */ GPIOB,
+      /* pad      */ GPIOB_WL_GDO0,
+      /* flags    */ 0,
+      /* mode     */ PAL_EVENT_MODE_BOTH_EDGES,
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 4,
     },
-    /* channel  4 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
+    /* channel  5 */ { // WL_GDO2: must be enabled explicitely
+      /* port     */ GPIOB,
+      /* pad      */ GPIOB_WL_GDO2,
+      /* flags    */ 0,
+      /* mode     */ PAL_EVENT_MODE_BOTH_EDGES,
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 5,
     },
-    /* channel  5 */ { // LASER_OC_N: must be enabled explicitely
-      /* mode     */ EXT_MODE_GPIOB | EXT_CH_MODE_FALLING_EDGE,
-      /* callback */ _moduleIsrCallback,
+    /* channel  6 */ { // SYS_PD_N: automatic interrupt on event
+      /* port     */ GPIOC,
+      /* pad      */ GPIOC_SYS_PD_N,
+      /* flags    */ AOS_INTERRUPT_AUTOSTART,
+      /* mode     */ PAL_EVENT_MODE_FALLING_EDGE,
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 6,
     },
-    /* channel  6 */ { // SYS_UART_DN: automatic interrupt on event
-      /* mode     */ EXT_MODE_GPIOB | EXT_CH_MODE_BOTH_EDGES | EXT_CH_MODE_AUTOSTART,
-      /* callback */ _moduleIsrCallback,
-    },
-    /* channel  7 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
-    },
-    /* channel  8 */ { // WL_GDO0: must be enabled explicitely
-      /* mode     */ EXT_MODE_GPIOB | EXT_CH_MODE_BOTH_EDGES,
-      /* callback */ _moduleIsrCallback,
-    },
-    /* channel  9 */ { // WL_GDO2: must be enabled explicitely
-      /* mode     */ EXT_MODE_GPIOB | EXT_CH_MODE_BOTH_EDGES,
-      /* callback */ _moduleIsrCallback,
-    },
-    /* channel 10 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
-    },
-    /* channel 11 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
-    },
-    /* channel 12 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
-    },
-    /* channel 13 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
-    },
-    /* channel 14 */ { // SYS_PD_N: automatic interrupt when activated
-      /* mode     */ EXT_MODE_GPIOC | EXT_CH_MODE_FALLING_EDGE | EXT_CH_MODE_AUTOSTART,
-      /* callback */ _moduleIsrCallback
-    },
-    /* channel 15 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
-    },
-    /* channel 16 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
-    },
-    /* channel 17 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
-    },
-    /* channel 18 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
-    },
-  }
+};
+
+aos_interrupt_driver_t moduleIntDriver = {
+  /* config     */ NULL,
+  /* interrupts */ 6,
 };
 
 I2CConfig moduleHalI2cEepromConfig = {
@@ -151,6 +123,7 @@ SerialConfig moduleHalProgIfConfig = {
 };
 
 SPIConfig moduleHalSpiLightConfig = {
+  /* circular buffer mode        */ false,
   /* callback function pointer   */ NULL,
   /* chip select line port       */ GPIOC,
   /* chip select line pad number */ GPIOC_LIGHT_XLAT,

@@ -29,14 +29,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /**
  * @brief   Interrupt service routine callback for I/O interrupt signals.
  *
- * @param   extp      EXT driver to handle the ISR.
- * @param   channel   Channel on which the interrupt was encountered.
+ * @param   args      Channel on which the interrupt was encountered.
  */
-static void _moduleIsrCallback(EXTDriver* extp, expchannel_t channel) {
-  (void)extp;
-
+static void _modulePalIsrCallback(void *args) {
   chSysLockFromISR();
-  chEvtBroadcastFlagsI(&aos.events.io, (1 << channel));
+  chEvtBroadcastFlagsI(&aos.events.io, (1 << (*(uint16_t*)args)));
   chSysUnlockFromISR();
 
   return;
@@ -72,101 +69,124 @@ CANConfig moduleHalCanConfig = {
   /* btr  */ CAN_BTR_SJW(1) | CAN_BTR_TS2(3) | CAN_BTR_TS1(15) | CAN_BTR_BRP(1),
 };
 
-EXTConfig moduleHalExtConfig = {
-  /* channel configrations */ {
-    /* channel  0 */ { // IR_INT1_N: must be enabled explicitely
-      /* mode     */ EXT_MODE_GPIOB | APAL2CH_EDGE(VCNL4020_LLD_INT_EDGE),
-      /* callback */ _moduleIsrCallback,
+aos_interrupt_cfg_t moduleIntConfig[14] = {
+    /* channel  1 */ { // IR_INT1_N: must be enabled explicitely
+      /* port     */ GPIOB,
+      /* pad      */ GPIOB_IR_INT1_N,
+      /* flags    */ 0,
+      /* mode     */ APAL2CH_EDGE(VCNL4020_LLD_INT_EDGE),
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 1,
     },
-    /* channel  1 */ { // GAUGE_BATLOW1: must be enabled explicitely
-      /* mode     */ EXT_MODE_GPIOC | EXT_CH_MODE_RISING_EDGE,
-      /* callback */ _moduleIsrCallback,
+    /* channel  2 */ { // GAUGE_BATLOW1: must be enabled explicitely
+      /* port     */ GPIOC,
+      /* pad      */ GPIOC_GAUGE_BATLOW1,
+      /* flags    */ 0,
+      /* mode     */ PAL_EVENT_MODE_RISING_EDGE,
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 2,
     },
-    /* channel  2 */ { // GAUGE_BATDG1_N: must be enabled expliciety
-      /* mode     */ EXT_MODE_GPIOC | EXT_CH_MODE_RISING_EDGE,
-      /* callback */ _moduleIsrCallback,
+    /* channel  3 */ { // GAUGE_BATGD1_N: must be enabled explicitely
+      /* port     */ GPIOC,
+      /* pad      */ GPIOC_GAUGE_BATGD1_N,
+      /* flags    */ 0,
+      /* mode     */ PAL_EVENT_MODE_RISING_EDGE,
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 3,
     },
-    /* channel  3 */ { // SYS_UART_DN: automatic interrupt on event
-      /* mode     */ EXT_MODE_GPIOB | EXT_CH_MODE_BOTH_EDGES | EXT_CH_MODE_AUTOSTART,
-      /* callback */ _moduleIsrCallback,
+    /* channel  4 */ { // SYS_UART_DN: automatic interrupt on event
+      /* port     */ GPIOB,
+      /* pad      */ GPIOB_SYS_UART_DN,
+      /* flags    */ AOS_INTERRUPT_AUTOSTART,
+      /* mode     */ PAL_EVENT_MODE_BOTH_EDGES,
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 4,
     },
-    /* channel  4 */ { // IR_INT2_N: must be enabled explicitely
-      /* mode     */ EXT_MODE_GPIOC | APAL2CH_EDGE(VCNL4020_LLD_INT_EDGE),
-      /* callback */ _moduleIsrCallback,
+    /* channel  5 */ { // IR_INT2_N: must be enabled explicitely
+      /* port     */ GPIOC,
+      /* pad      */ GPIOC_IR_INT2_N,
+      /* flags    */ 0,
+      /* mode     */ APAL2CH_EDGE(VCNL4020_LLD_INT_EDGE),
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 5,
     },
-    /* channel  5 */ { // TOUCH_INT: must be enabled explicitely
-      /* mode     */ EXT_MODE_GPIOC | APAL2CH_EDGE(MPR121_LLD_INT_EDGE),
-      /* callback */ _moduleIsrCallback,
+    /* channel  6 */ { // TOUCH_INT: must be enabled explicitely
+      /* port     */ GPIOC,
+      /* pad      */ GPIOC_TOUCH_INT_N,
+      /* flags    */ 0,
+      /* mode     */ APAL2CH_EDGE(MPR121_LLD_INT_EDGE),
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 6,
     },
-    /* channel  6 */ { // GAUGE_BATLOW2: must be enabled explicitely
-      /* mode     */ EXT_MODE_GPIOB | EXT_CH_MODE_RISING_EDGE,
-      /* callback */ _moduleIsrCallback,
+    /* channel  7 */ { // GAUGE_BATLOW2: must be enabled explicitely
+      /* port     */ GPIOB,
+      /* pad      */ GPIOB_GAUGE_BATLOW2,
+      /* flags    */ 0,
+      /* mode     */ PAL_EVENT_MODE_RISING_EDGE,
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 7,
     },
-    /* channel  7 */ { // GAUGE_BATDG2_N: must be enabled expliciety
-      /* mode     */ EXT_MODE_GPIOB | EXT_CH_MODE_RISING_EDGE,
-      /* callback */ _moduleIsrCallback,
+    /* channel  8 */ { // GAUGE_BATGD2_N: must be enabled explicitely
+      /* port     */ GPIOB,
+      /* pad      */ GPIOB_GAUGE_BATGD2_N,
+      /* flags    */ 0,
+      /* mode     */ PAL_EVENT_MODE_RISING_EDGE,
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 8,
     },
-    /* channel  8 */ { // PATH_DC: must be enabled explicitely
-      /* mode     */ EXT_MODE_GPIOC | EXT_CH_MODE_BOTH_EDGES,
-      /* callback */ _moduleIsrCallback,
+    /* channel  9 */ { // PATH_DC: must be enabled explicitely
+      /* port     */ GPIOC,
+      /* pad      */ GPIOC_PATH_DC,
+      /* flags    */ 0,
+      /* mode     */ PAL_EVENT_MODE_BOTH_EDGES,
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 9,
     },
-    /* channel  9 */ { // SYS_SPI_DIR: must be enabled explicitely
-      /* mode     */ EXT_MODE_GPIOC | EXT_CH_MODE_BOTH_EDGES,
-      /* callback */ _moduleIsrCallback,
+    /* channel 10 */ { // SYS_SPI_DIR: must be enabled explicitely
+      /* port     */ GPIOC,
+      /* pad      */ GPIOC_SYS_SPI_DIR,
+      /* flags    */ 0,
+      /* mode     */ PAL_EVENT_MODE_BOTH_EDGES,
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 10,
     },
-    /* channel 10 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
+    /* channel 11 */ { // SYS_SYNC_N: must be enabled explicitely
+      /* port     */ GPIOC,
+      /* pad      */ GPIOC_SYS_INT_N, // TODO: check this
+      /* flags    */ AOS_INTERRUPT_AUTOSTART,
+      /* mode     */ PAL_EVENT_MODE_BOTH_EDGES,
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 11,
     },
-    /* channel 11 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
+    /* channel 12 */ { // SYS_PD_N: must be enabled explicitely
+      /* port     */ GPIOC,
+      /* pad      */ GPIOC_SYS_PD_N,
+      /* flags    */ AOS_INTERRUPT_AUTOSTART,
+      /* mode     */ PAL_EVENT_MODE_FALLING_EDGE,
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 12,
     },
-    /* channel 12 */ { // SYS_SYNC_N: automatic interrupt on event
-      /* mode     */ EXT_MODE_GPIOC | EXT_CH_MODE_BOTH_EDGES | EXT_CH_MODE_AUTOSTART,
-      /* callback */ _moduleIsrCallback,
+    /* channel 13 */ { // SYS_WARMRST_N: must be enabled explicitely
+      /* port     */ GPIOC,
+      /* pad      */ GPIOC_SYS_WARMRST_N,
+      /* flags    */ AOS_INTERRUPT_AUTOSTART,
+      /* mode     */ PAL_EVENT_MODE_FALLING_EDGE,
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 13,
     },
-    /* channel 13 */ { // SYS_PD_N: automatic interrupt when activated
-      /* mode     */ EXT_MODE_GPIOC | EXT_CH_MODE_FALLING_EDGE | EXT_CH_MODE_AUTOSTART,
-      /* callback */ _moduleIsrCallback,
+    /* channel 14 */ { // SYS_UART_UP: must be enabled explicitely
+      /* port     */ GPIOB,
+      /* pad      */ GPIOB_SYS_UART_UP,
+      /* flags    */ AOS_INTERRUPT_AUTOSTART,
+      /* mode     */ PAL_EVENT_MODE_BOTH_EDGES,
+      /* callback */ _modulePalIsrCallback,
+      /* cb arg   */ 14,
     },
-    /* channel 14 */ { // SYS_WARMRST_N: automatic interrupt when activated
-      /* mode     */ EXT_MODE_GPIOC | EXT_CH_MODE_FALLING_EDGE | EXT_CH_MODE_AUTOSTART,
-      /* callback */ _moduleIsrCallback,
-    },
-    /* channel 15 */ { // SYS_UART_UP: automatic interrupt on event
-      /* mode     */ EXT_MODE_GPIOB| EXT_CH_MODE_BOTH_EDGES | EXT_CH_MODE_AUTOSTART,
-      /* callback */ _moduleIsrCallback,
-    },
-    /* channel 16 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
-    },
-    /* channel 17 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
-    },
-    /* channel 18 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
-    },
-    /* channel 19 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
-    },
-    /* channel 20 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
-    },
-    /* channel 21 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
-    },
-    /* channel 22 */ {
-      /* mode     */ EXT_CH_MODE_DISABLED,
-      /* callback */ NULL,
-    },
-  },
+};
+
+aos_interrupt_driver_t moduleIntDriver = {
+  /* config     */ NULL,
+  /* interrupts */ 14,
 };
 
 I2CConfig moduleHalI2cProxPm18Pm33GaugeRearConfig = {
@@ -879,15 +899,16 @@ static int _utShellCmdCb_AlldMpr121(BaseSequentialStream* stream, int argc, char
 {
   (void)argc;
   (void)argv;
-  extChannelEnable(&MODULE_HAL_EXT, MODULE_GPIO_EXTCHANNEL_TOUCHINT);
+  aosIntEnable(&moduleIntDriver, MODULE_GPIO_INT_TOUCHINT);
   aosUtRun(stream, &moduleUtAlldMpr121, NULL);
+  aosIntDisable(&moduleIntDriver, MODULE_GPIO_INT_TOUCHINT);
   return AOS_OK;
 }
 static ut_mpr121data_t _utAlldMpr121Data= {
   /* MPR121 driver  */ &moduleLldTouch,
   /* timeout        */ MICROSECONDS_PER_SECOND,
   /* event source   */ &aos.events.io,
-  /* event flags    */ (1 << MODULE_GPIO_EXTCHANNEL_TOUCHINT),
+  /* event flags    */ (1 << MODULE_GPIO_INT_TOUCHINT),
 };
 aos_unittest_t moduleUtAlldMpr121 = {
   /* name           */ "MPR121",
@@ -1061,8 +1082,8 @@ static int _utShellCmdCb_AlldVcnl4020(BaseSequentialStream* stream, int argc, ch
       case WNW:
         mux = &moduleLldI2cMultiplexer1;
         ((ut_vcnl4020data_t*)moduleUtAlldVcnl4020.data)->vcnld = &moduleLldProximity1;
-        ((ut_vcnl4020data_t*)moduleUtAlldVcnl4020.data)->evtflags = (1 << MODULE_GPIO_EXTCHANNEL_IRINT2);
-        extChannelEnable(&MODULE_HAL_EXT, MODULE_GPIO_EXTCHANNEL_IRINT2);
+        ((ut_vcnl4020data_t*)moduleUtAlldVcnl4020.data)->evtflags = (1 << MODULE_GPIO_INT_IRINT2);
+        aosIntEnable(&moduleIntDriver, MODULE_GPIO_INT_IRINT2);
         break;
       case NNW:
       case NNE:
@@ -1070,8 +1091,8 @@ static int _utShellCmdCb_AlldVcnl4020(BaseSequentialStream* stream, int argc, ch
       case ESE:
         mux = &moduleLldI2cMultiplexer2;
         ((ut_vcnl4020data_t*)moduleUtAlldVcnl4020.data)->vcnld = &moduleLldProximity2;
-        ((ut_vcnl4020data_t*)moduleUtAlldVcnl4020.data)->evtflags = (1 << MODULE_GPIO_EXTCHANNEL_IRINT1);
-        extChannelEnable(&MODULE_HAL_EXT, MODULE_GPIO_EXTCHANNEL_IRINT1);
+        ((ut_vcnl4020data_t*)moduleUtAlldVcnl4020.data)->evtflags = (1 << MODULE_GPIO_INT_IRINT1);
+        aosIntEnable(&moduleIntDriver, MODULE_GPIO_INT_IRINT1);
         break;
       default:
         break;
@@ -1088,34 +1109,42 @@ static int _utShellCmdCb_AlldVcnl4020(BaseSequentialStream* stream, int argc, ch
       case NNE:
         pca9544a_lld_setchannel(mux, PCA9544A_LLD_CH1, ((ut_vcnl4020data_t*)moduleUtAlldVcnl4020.data)->timeout);
         aosUtRun(stream, &moduleUtAlldVcnl4020, "north-northeast sensor");
+        aosIntDisable(&moduleIntDriver, MODULE_GPIO_INT_IRINT1);
         break;
       case ENE:
         pca9544a_lld_setchannel(mux, PCA9544A_LLD_CH3, ((ut_vcnl4020data_t*)moduleUtAlldVcnl4020.data)->timeout);
         aosUtRun(stream, &moduleUtAlldVcnl4020, "east-northeast sensor");
+        aosIntDisable(&moduleIntDriver, MODULE_GPIO_INT_IRINT1);
         break;
       case ESE:
         pca9544a_lld_setchannel(mux, PCA9544A_LLD_CH2, ((ut_vcnl4020data_t*)moduleUtAlldVcnl4020.data)->timeout);
         aosUtRun(stream, &moduleUtAlldVcnl4020, "north-southeast sensor");
+        aosIntDisable(&moduleIntDriver, MODULE_GPIO_INT_IRINT1);
         break;
       case SSE:
         pca9544a_lld_setchannel(mux, PCA9544A_LLD_CH0, ((ut_vcnl4020data_t*)moduleUtAlldVcnl4020.data)->timeout);
         aosUtRun(stream, &moduleUtAlldVcnl4020, "south-southeast sensor");
+        aosIntDisable(&moduleIntDriver, MODULE_GPIO_INT_IRINT2);
         break;
       case SSW:
         pca9544a_lld_setchannel(mux, PCA9544A_LLD_CH1, ((ut_vcnl4020data_t*)moduleUtAlldVcnl4020.data)->timeout);
         aosUtRun(stream, &moduleUtAlldVcnl4020, "south-southwest sensor");
+        aosIntDisable(&moduleIntDriver, MODULE_GPIO_INT_IRINT2);
         break;
       case WSW:
         pca9544a_lld_setchannel(mux, PCA9544A_LLD_CH3, ((ut_vcnl4020data_t*)moduleUtAlldVcnl4020.data)->timeout);
         aosUtRun(stream, &moduleUtAlldVcnl4020, "west-southwest sensor");
+        aosIntDisable(&moduleIntDriver, MODULE_GPIO_INT_IRINT2);
         break;
       case WNW:
         pca9544a_lld_setchannel(mux, PCA9544A_LLD_CH2, ((ut_vcnl4020data_t*)moduleUtAlldVcnl4020.data)->timeout);
         aosUtRun(stream, &moduleUtAlldVcnl4020, "west-northwest sensor");
+        aosIntDisable(&moduleIntDriver, MODULE_GPIO_INT_IRINT2);
         break;
       case NNW:
         pca9544a_lld_setchannel(mux, PCA9544A_LLD_CH0, ((ut_vcnl4020data_t*)moduleUtAlldVcnl4020.data)->timeout);
         aosUtRun(stream, &moduleUtAlldVcnl4020, "north-northwest sensor");
+        aosIntDisable(&moduleIntDriver, MODULE_GPIO_INT_IRINT1);
         break;
       default:
         break;

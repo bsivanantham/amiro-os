@@ -56,9 +56,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 static inline void usleep(apalTime_t us)
 {
   // check if the specified time can be represented by the system
-  aosDbgCheck(us <= LL_ST2US(TIME_INFINITE));
+  aosDbgCheck(us <= TIME_I2US(TIME_INFINITE));
 
-  const systime_t st = LL_US2ST(us);
+  const systime_t st = TIME_US2I(us);
   // TIME_IMMEDIATE makes no sense and would even cause system halt
   if (st != TIME_IMMEDIATE) {
     chThdSleep(st);
@@ -185,15 +185,15 @@ static inline apalExitStatus_t apalControlGpioSet(const apalControlGpio_t* const
 
 #endif
 
-#if HAL_USE_EXT || defined(__DOXYGEN__)
+#if HAL_USE_PAL || defined(__DOXYGEN__)
 
 /**
  * @brief   Converts an apalGpioEdge_t to an ChibiOS EXT edge.
  */
 #define APAL2CH_EDGE(edge)                                        \
-  ((edge == APAL_GPIO_EDGE_RISING) ? EXT_CH_MODE_RISING_EDGE :    \
-    (edge == APAL_GPIO_EDGE_FALLING) ? EXT_CH_MODE_FALLING_EDGE : \
-     (edge == APAL_GPIO_EDGE_BOTH) ? EXT_CH_MODE_BOTH_EDGES : 0)
+  ((edge == APAL_GPIO_EDGE_RISING) ? PAL_EVENT_MODE_RISING_EDGE :    \
+    (edge == APAL_GPIO_EDGE_FALLING) ? PAL_EVENT_MODE_FALLING_EDGE : \
+     (edge == APAL_GPIO_EDGE_BOTH) ? PAL_EVENT_MODE_BOTH_EDGES : 0)
 
 #endif
 
@@ -365,13 +365,13 @@ static inline apalExitStatus_t apalI2CMasterTransmit(apalI2CDriver_t* i2cd, cons
   msg_t status = MSG_OK;
   if (rxbytes == 1) {
     uint8_t buffer[2];
-    status = i2cMasterTransmitTimeout(i2cd, addr, txbuf, txbytes, buffer, 2, ((timeout >= TIME_INFINITE) ? TIME_INFINITE : LL_US2ST(timeout)) );
+    status = i2cMasterTransmitTimeout(i2cd, addr, txbuf, txbytes, buffer, 2, ((timeout >= TIME_INFINITE) ? TIME_INFINITE : TIME_US2I(timeout)) );
     rxbuf[0] = buffer[0];
   } else {
-    status = i2cMasterTransmitTimeout(i2cd, addr, txbuf, txbytes, rxbuf, rxbytes, ((timeout >= TIME_INFINITE) ? TIME_INFINITE : LL_US2ST(timeout)) );
+    status = i2cMasterTransmitTimeout(i2cd, addr, txbuf, txbytes, rxbuf, rxbytes, ((timeout >= TIME_INFINITE) ? TIME_INFINITE : TIME_US2I(timeout)) );
   }
 #else
-  const msg_t status = i2cMasterTransmitTimeout(i2cd, addr, txbuf, txbytes, rxbuf, rxbytes, ((timeout >= TIME_INFINITE) ? TIME_INFINITE : LL_US2ST(timeout)) );
+  const msg_t status = i2cMasterTransmitTimeout(i2cd, addr, txbuf, txbytes, rxbuf, rxbytes, ((timeout >= TIME_INFINITE) ? TIME_INFINITE : TIME_US2I(timeout)) );
 #endif
 
 #if (I2C_USE_MUTUAL_EXCLUSION == TRUE)
@@ -418,13 +418,13 @@ static inline apalExitStatus_t apalI2CMasterReceive(apalI2CDriver_t* i2cd, const
   msg_t status = MSG_OK;
   if (rxbytes == 1) {
     uint8_t buffer[2];
-    status = i2cMasterReceiveTimeout(i2cd, addr, buffer, 2, ((timeout >= TIME_INFINITE) ? TIME_INFINITE : LL_US2ST(timeout)) );
+    status = i2cMasterReceiveTimeout(i2cd, addr, buffer, 2, ((timeout >= TIME_INFINITE) ? TIME_INFINITE : TIME_US2I(timeout)) );
     rxbuf[0] = buffer[0];
   } else {
-    status = i2cMasterReceiveTimeout(i2cd, addr, rxbuf, rxbytes, ((timeout >= TIME_INFINITE) ? TIME_INFINITE : LL_US2ST(timeout)) );
+    status = i2cMasterReceiveTimeout(i2cd, addr, rxbuf, rxbytes, ((timeout >= TIME_INFINITE) ? TIME_INFINITE : TIME_US2I(timeout)) );
   }
 #else
-  const msg_t status = i2cMasterReceiveTimeout(i2cd, addr, rxbuf, rxbytes, ((timeout >= TIME_INFINITE) ? TIME_INFINITE : LL_US2ST(timeout)) );
+  const msg_t status = i2cMasterReceiveTimeout(i2cd, addr, rxbuf, rxbytes, ((timeout >= TIME_INFINITE) ? TIME_INFINITE : TIME_US2I(timeout)) );
 #endif
 
 #if (I2C_USE_MUTUAL_EXCLUSION == TRUE)

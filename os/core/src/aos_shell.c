@@ -131,6 +131,7 @@ static size_t _channelreadt(void *instance, uint8_t *bp, size_t n, systime_t tim
 }
 
 static const struct AosShellChannelVMT _channelvmt = {
+  (size_t) 0,
   _channelwrite,
   _channelread,
   _channelput,
@@ -195,6 +196,7 @@ static msg_t _streamget(void *instance)
 }
 
 static const struct AosShellStreamVMT _streamvmt = {
+  (size_t) 0,
   _streamwrite,
   _stremread,
   _streamput,

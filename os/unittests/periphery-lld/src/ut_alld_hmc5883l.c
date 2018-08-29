@@ -159,7 +159,7 @@ aos_utresult_t utAlldHmc5883lFunc(BaseSequentialStream* stream, aos_unittest_t* 
 
   chprintf(stream, "interrupt (full data read)...\n");
   status |= hmc5883l_lld_read_data(((ut_hmc5883ldata_t*)ut->data)->driver, mdata, ((ut_hmc5883ldata_t*)ut->data)->timeout);
-  event_mask = chEvtWaitOneTimeout(EVENT_MASK(0), LL_US2ST(100 * MICROSECONDS_PER_MILLISECOND));
+  event_mask = chEvtWaitOneTimeout(EVENT_MASK(0), TIME_US2I(100 * MICROSECONDS_PER_MILLISECOND));
   chprintf(stream, "\t\teventmask = 0x%08X (should be 1)\n", event_mask);
   if (event_mask == EVENT_MASK(0)) {
     aosUtPassed(stream, &result);
@@ -176,7 +176,7 @@ aos_utresult_t utAlldHmc5883lFunc(BaseSequentialStream* stream, aos_unittest_t* 
   aosSysGetUptime(&t);
   status |= hmc5883l_lld_read_data(((ut_hmc5883ldata_t*)ut->data)->driver, mdata, ((ut_hmc5883ldata_t*)ut->data)->timeout);
   while (t - start < MICROSECONDS_PER_SECOND) {
-    event_mask = chEvtWaitOneTimeout(EVENT_MASK(0), US2ST(1000));
+    event_mask = chEvtWaitOneTimeout(EVENT_MASK(0), TIME_US2I(1000));
     if (event_mask == EVENT_MASK(0)) {
       status |= hmc5883l_lld_read_data(((ut_hmc5883ldata_t*)ut->data)->driver, mdata, ((ut_hmc5883ldata_t*)ut->data)->timeout);
       data_reads++;

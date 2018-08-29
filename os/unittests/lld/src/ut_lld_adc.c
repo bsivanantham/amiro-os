@@ -115,7 +115,7 @@ aos_utresult_t utAdcFunc(BaseSequentialStream* stream, aos_unittest_t* ut)
   conversionGroup.ltr = _adcWdgThreshold;
   _listener = chThdGetSelfX();
   adcStartConversion(((ut_adcdata_t*)(ut->data))->driver, &conversionGroup, buffer, 1);
-  eventmask = chEvtWaitOneTimeout(_adcWdgEventmask, LL_S2ST(5));
+  eventmask = chEvtWaitOneTimeout(_adcWdgEventmask, TIME_S2I(5));
   if (eventmask == _adcWdgEventmask) {
     aosUtPassedMsg(stream, &result, "%fV %c 9V\n", _adc2volt(buffer[0]), (buffer[0] > _adcWdgThreshold) ? '>' : '<');
     wdgpassed = true;
@@ -139,7 +139,7 @@ aos_utresult_t utAdcFunc(BaseSequentialStream* stream, aos_unittest_t* ut)
       aosThdMSleep(100); // wait some time so the ADC wil trigger again immediately due to noise
       _listener = chThdGetSelfX();
       adcStartConversion(((ut_adcdata_t*)(ut->data))->driver, &conversionGroup, buffer, 1);
-      eventmask = chEvtWaitOneTimeout(_adcWdgEventmask, LL_S2ST(10));
+      eventmask = chEvtWaitOneTimeout(_adcWdgEventmask, TIME_S2I(10));
       if (eventmask == _adcWdgEventmask) {
         aosUtPassedMsg(stream, &result, "%fV %c 9V\n", _adc2volt(buffer[0]), (buffer[0] > _adcWdgThreshold) ? '>' : '<');
       } else {
