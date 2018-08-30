@@ -85,7 +85,7 @@ static msg_t _channelget(void *instance)
 /**
  * @brief   Implementation of the BaseAsynchronous putt() method.
  */
-static msg_t _channelputt(void *instance, uint8_t b, systime_t time)
+static msg_t _channelputt(void *instance, uint8_t b, sysinterval_t time)
 {
   if (((AosShellChannel*)instance)->flags & AOS_SHELLCHANNEL_OUTPUT_ENABLED) {
     return chnPutTimeout(((AosShellChannel*)instance)->asyncchannel, b, time);
@@ -97,7 +97,7 @@ static msg_t _channelputt(void *instance, uint8_t b, systime_t time)
 /**
  * @brief   Implementation of the BaseAsynchronous gett() method.
  */
-static msg_t _channelgett(void *instance, systime_t time)
+static msg_t _channelgett(void *instance, sysinterval_t time)
 {
   if (((AosShellChannel*)instance)->flags & AOS_SHELLCHANNEL_INPUT_ENABLED) {
     return chnGetTimeout(((AosShellChannel*)instance)->asyncchannel, time);
@@ -109,7 +109,7 @@ static msg_t _channelgett(void *instance, systime_t time)
 /**
  * @brief   Implementation of the BaseAsynchronous writet() method.
  */
-static size_t _channelwritet(void *instance, const uint8_t *bp, size_t n, systime_t time)
+static size_t _channelwritet(void *instance, const uint8_t *bp, size_t n, sysinterval_t time)
 {
   if (((AosShellChannel*)instance)->flags & AOS_SHELLCHANNEL_OUTPUT_ENABLED) {
     return chnWriteTimeout(((AosShellChannel*)instance)->asyncchannel, bp, n, time);
@@ -121,13 +121,32 @@ static size_t _channelwritet(void *instance, const uint8_t *bp, size_t n, systim
 /**
  * @brief   Implementation of the BaseAsynchronous readt() method.
  */
-static size_t _channelreadt(void *instance, uint8_t *bp, size_t n, systime_t time)
+static size_t _channelreadt(void *instance, uint8_t *bp, size_t n, sysinterval_t time)
 {
   if (((AosShellChannel*)instance)->flags & AOS_SHELLCHANNEL_INPUT_ENABLED) {
     return chnReadTimeout(((AosShellChannel*)instance)->asyncchannel, bp, n, time);
   } else {
     return 0;
   }
+}
+
+/**
+ * @brief   Implementation of the BaseAsynchronousChannel ctl() method.
+ */
+static msg_t _channelctl(void *instance, unsigned int operation, void *arg) {
+  (void) instance;
+
+  switch (operation) {
+  case CHN_CTL_NOP:
+    osalDbgCheck(arg == NULL);
+    break;
+  case CHN_CTL_INVALID:
+    osalDbgAssert(false, "invalid CTL operation");
+    break;
+  default:
+    break;
+  }
+  return MSG_OK;
 }
 
 static const struct AosShellChannelVMT _channelvmt = {
@@ -140,6 +159,7 @@ static const struct AosShellChannelVMT _channelvmt = {
   _channelgett,
   _channelwritet,
   _channelreadt,
+  _channelctl,
 };
 
 static size_t _streamwrite(void *instance, const uint8_t *bp, size_t n)

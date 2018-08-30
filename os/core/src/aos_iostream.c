@@ -72,7 +72,7 @@ static msg_t _channelget(void *instance)
 /**
  * @brief   Implementation of the BaseAsynchronousChannel putt() method.
  */
-static msg_t _channelputt(void *instance, uint8_t b, systime_t time)
+static msg_t _channelputt(void *instance, uint8_t b, sysinterval_t time)
 {
   if (((AosIOChannel*)instance)->flags & AOS_IOCHANNEL_OUTPUT_ENABLE) {
     return chnPutTimeout(((AosIOChannel*)instance)->asyncchannel, b, time);
@@ -84,7 +84,7 @@ static msg_t _channelputt(void *instance, uint8_t b, systime_t time)
 /**
  * @brief   Implementation of the BaseAsynchronousChannel gett() method.
  */
-static msg_t _channelgett(void *instance, systime_t time)
+static msg_t _channelgett(void *instance, sysinterval_t time)
 {
   if (((AosIOChannel*)instance)->flags & AOS_IOCHANNEL_INPUT_ENABLE) {
     return chnGetTimeout(((AosIOChannel*)instance)->asyncchannel, time);
@@ -96,7 +96,7 @@ static msg_t _channelgett(void *instance, systime_t time)
 /**
  * @brief   Implementation of the BaseAsynchronousChannel writet() method.
  */
-static size_t _channelwritet(void *instance, const uint8_t *bp, size_t n, systime_t time)
+static size_t _channelwritet(void *instance, const uint8_t *bp, size_t n, sysinterval_t time)
 {
   if (((AosIOChannel*)instance)->flags & AOS_IOCHANNEL_OUTPUT_ENABLE) {
     return chnWriteTimeout(((AosIOChannel*)instance)->asyncchannel, bp, n, time);
@@ -108,13 +108,32 @@ static size_t _channelwritet(void *instance, const uint8_t *bp, size_t n, systim
 /**
  * @brief   Implementation of the BaseAsynchronousChannel readt() method.
  */
-static size_t _channelreadt(void *instance, uint8_t *bp, size_t n, systime_t time)
+static size_t _channelreadt(void *instance, uint8_t *bp, size_t n, sysinterval_t time)
 {
   if (((AosIOChannel*)instance)->flags & AOS_IOCHANNEL_INPUT_ENABLE) {
     return chnReadTimeout(((AosIOChannel*)instance)->asyncchannel, bp, n, time);
   } else {
     return 0;
   }
+}
+
+/**
+ * @brief   Implementation of the BaseAsynchronousChannel ctl() method.
+ */
+static msg_t _channelctl(void *instance, unsigned int operation, void *arg) {
+  (void) instance;
+
+  switch (operation) {
+  case CHN_CTL_NOP:
+    osalDbgCheck(arg == NULL);
+    break;
+  case CHN_CTL_INVALID:
+    osalDbgAssert(false, "invalid CTL operation");
+    break;
+  default:
+    break;
+  }
+  return MSG_OK;
 }
 
 /**
@@ -130,6 +149,7 @@ static const struct AosIOChannelVMT _channelvmt = {
   _channelgett,
   _channelwritet,
   _channelreadt,
+  _channelctl,
 };
 
 /**
