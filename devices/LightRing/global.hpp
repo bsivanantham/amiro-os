@@ -2,6 +2,7 @@
 #define AMIRO_GLOBAL_HPP_
 
 #include <hal.h>
+#include <ch.hpp>
 
 #include <board.h>
 #include <amiro/bus/i2c/HWI2CDriver.hpp>
@@ -11,15 +12,16 @@
 #include <amiro/FileSystemInputOutput/FSIOLightRing.hpp>
 #include <LightRing.h>
 #include <amiro/Lidar.h>
-#include <amiro/radio/a2500r24a.hpp>
 #include <amiro/serial_reset/serial_can_mux.hpp>
 #include <userthread.hpp>
+
 
 namespace amiro {
 
 class Global final
 {
 public:
+
   I2CConfig i2c2_config{
     /* I2C mode                 */ OPMODE_I2C,
     /* frequency                */ 400000,
@@ -45,11 +47,39 @@ public:
     /* chip select line pad number */ GPIOC_LIGHT_XLAT,
     /* initialzation data          */ SPI_CR1_BR_0 | SPI_CR1_BR_1
   };
-  SPIConfig spi2_config{
-    /* callback function pointer   */ NULL,
-    /* chip select line port       */ GPIOB,
-    /* chip select line pad number */ GPIOB_WL_SS_N,
-    /* initialzation data          */ SPI_CR1_BR_0
+
+  // I2SDriver i2sDriver;
+  //
+  // // const size_t buffer_size = 1 /* addressing */+  1; /* who am i */
+  // uint8_t buffer[4];
+  // I2SConfig i2sConfig{
+  //   buffer,
+  //   buffer,
+  //   4,
+  //   nullptr,
+  //   SPI_I2SCFGR_CHLEN,
+  //   SPI_I2SPR_MCKOE
+  // };
+
+  //I2S driver global implementation
+  #define I2S_BUF_SIZE        256
+  uint16_t i2s_rx_buf[I2S_BUF_SIZE];
+  uint16_t i2s_tx_buf[I2S_BUF_SIZE];
+
+  //dummy function
+  static void i2scallback(I2SDriver *i2sp, size_t offset, size_t n){
+    (void)i2sp;
+    (void)offset;
+    (void)n;
+  }
+
+  I2SConfig i2scfg {
+    i2s_tx_buf,
+    i2s_rx_buf,
+    I2S_BUF_SIZE,
+    i2scallback,
+    SPI_I2SCFGR_DATLEN | SPI_I2SCFGR_DATLEN_0 | SPI_I2SCFGR_DATLEN_1,
+    SPI_I2SPR_MCKOE | SPI_I2SCFGR_CKPOL
   };
 
   /**
@@ -60,7 +90,7 @@ public:
   HWI2CDriver HW_I2C2;
 
   HWSPIDriver HW_SPI1;
-  HWSPIDriver HW_SPI2;
+
 
   TLC5947 tlc5947;
 
@@ -71,9 +101,9 @@ public:
 
   SerialCanMux sercanmux1;
 
-  Lidar lidar;
 
-  A2500R24A a2500r24a;
+
+  Lidar lidar;
 
   UserThread userThread;
 
@@ -82,14 +112,13 @@ public:
 public:
   Global() :
     HW_I2C2(&I2CD2),
-    HW_SPI1(&SPID1, &spi1_config), HW_SPI2(&SPID2, &spi2_config),
+    HW_SPI1(&SPID1, &spi1_config),
     tlc5947(&HW_SPI1, GPIOA, GPIOA_LIGHT_BLANK),
     at24c01(0x400u / 0x08u, 0x08u, 500u, &HW_I2C2),
     memory(at24c01, /*BMSV*/ 1, /*bmsv*/ 2, /*HMV*/ 1, /*hmv*/ 0),
-    robot(&CAND1, &tlc5947, &memory),
+    robot(&CAND1,&tlc5947,&memory),
     sercanmux1(&SD1, &CAND1, CAN::LIGHT_RING_ID),
     lidar(CAN::LIGHT_RING_ID, Lidar::SETUP::POWER_ONLY),
-    a2500r24a(&HW_SPI2),
     userThread()
   {
     return;

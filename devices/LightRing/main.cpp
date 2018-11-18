@@ -18,6 +18,8 @@
 #include <chprintf.h>
 #include <shell.h>
 
+#include <iostream>
+
 using namespace amiro;
 using namespace chibios_rt;
 
@@ -254,11 +256,11 @@ void boardPeripheryCheck(BaseSequentialStream *chp) {
   chprintf(chp, "\nCHECK: START\n");
 
   // Check the radio
-  result = global.a2500r24a.getCheck();
-  if (result == global.a2500r24a.CHECK_OK)
-    chprintf(chp, "A2500R24A: OK\n");
-  else
-    chprintf(chp, "A2500R24A: FAIL\n");
+  //result = global.a2500r24a.getCheck();
+  //if (result == global.a2500r24a.CHECK_OK)
+    //chprintf(chp, "A2500R24A: OK\n");
+  //else
+    //chprintf(chp, "A2500R24A: FAIL\n");
 
   // Check the eeprom
   result = global.memory.getCheck();
@@ -460,6 +462,20 @@ void shellRequestGetBootloaderInfo(BaseSequentialStream* chp, int argc, char *ar
   return;
 }
 
+void sound(BaseSequentialStream *chp, int argc, char *argv[]) {
+  while (true) {
+    chprintf((BaseSequentialStream*) &SD1, "I hope So....\n");
+  }
+}
+
+void print_memory_address(BaseSequentialStream *chp, int argc, char *argv[]){
+  chprintf((BaseSequentialStream*) &SD1, "STM32_I2S_SPI2_RX_DMA_STREAM: %d\n", STM32_I2S_SPI2_RX_DMA_STREAM);
+  chprintf((BaseSequentialStream*) &SD1, "STM32_I2S_SPI2_TX_DMA_STREAM: %d\n", STM32_I2S_SPI2_TX_DMA_STREAM);
+  chprintf((BaseSequentialStream*) &SD1, "I2SD2.rxdmamode: %d\n", I2SD2.rxdmamode);
+  chprintf((BaseSequentialStream*) &SD1, "I2SD2.txdmamode: %d\n", I2SD2.txdmamode);
+}
+
+
 static const ShellCommand commands[] = {
   {"shutdown", shellRequestShutdown},
   {"check", shellRequestCheck},
@@ -471,8 +487,11 @@ static const ShellCommand commands[] = {
   {"get_system_load", shellRequestGetSystemLoad},
   {"shell_board", shellSwitchBoardCmd},
   {"get_bootloader_info", shellRequestGetBootloaderInfo},
+  {"print_mem_ad", print_memory_address},
+  {"sound", sound},
   {NULL, NULL}
 };
+
 
 static const ShellConfig shell_cfg1 = {
   (BaseSequentialStream *) &global.sercanmux1,
@@ -497,12 +516,19 @@ int main(void) {
    */
   halInit();
   System::init();
+  i2sInit();
+  i2sStart(&I2SD2, &global.i2scfg);
 
   /*
    * Activates the serial driver 2 using the driver default configuration.
    */
   sdStart(&SD1, &global.sd1_config);
   sdStart(&SD2, &global.sd2_config);
+
+  /*
+  * i2s start
+  */
+  //i2sStart(&I2SD2, &global.i2scfg);
 
   chprintf((BaseSequentialStream*) &SD1, "\n");
   chprintf((BaseSequentialStream*) &SD1, BOARD_NAME " " BOARD_VERSION "\n");

@@ -23,6 +23,8 @@ namespace amiro {
     int32_t getMagnetometerValue(int axis);
     int16_t getGyroscopeValue(int axis);
 
+    int16_t getSound(float raw_sound);
+
     void calibrateProximityRingValues();
     void calibrateProximityFloorValues();
 
@@ -59,4 +61,3 @@ namespace amiro {
 }
 
 #endif /* AMIRO_CONTROLLER_AREA_NETWORK_RX_H_ */
-

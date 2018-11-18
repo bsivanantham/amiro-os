@@ -76,6 +76,7 @@ include $(CHIBIOS)/os/hal/hal.mk
 include $(CHIBIOS)/os/ports/GCC/ARMCMx/STM32F1xx/port.mk
 include $(CHIBIOS)/os/kernel/kernel.mk
 include $(CHIBIOS)/os/various/cpp_wrappers/kernel.mk
+include $(AMIRO)/hal/hal.mk
 
 # Define linker script file here
 LDSCRIPT= $(BOARDLD)/STM32F103xE.ld
@@ -110,6 +111,7 @@ CPPSRC = $(CHCPPSRC) \
          $(AMIRO)/components/ControllerAreaNetworkRx.cpp \
          $(AMIRO)/components/ControllerAreaNetworkTx.cpp \
          $(AMIRO)/components/Lidar.cpp \
+				 $(AMIRO)/components/spk_3421.cpp \
          $(AMIRO)/components/serial_reset/serial_can_mux.cpp \
          LightRing.cpp \
          userthread.cpp \

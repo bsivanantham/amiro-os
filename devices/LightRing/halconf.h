@@ -64,6 +64,14 @@
 #endif
 
 /**
+ * @brief   Enables the I2S subsystem - Created
+ * tag:Enables I2S
+ */
+#if !defined(HAL_USE_I2S) || defined(__DOXYGEN__)
+#define HAL_USE_I2S                 TRUE
+#endif
+
+/**
  * @brief   Enables the ICU subsystem.
  */
 #if !defined(HAL_USE_ICU) || defined(__DOXYGEN__)

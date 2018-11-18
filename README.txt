@@ -215,3 +215,20 @@ system. All other modules are powered off after reset so that only these two
 offer a bootloader that is required for flashing.
 
 ================================================================================
+
+
+# AMiro_ASE_ProjectSpeaktoAMiro
+
+## Pin Mapping (MCU → mic):
+**(via I2S2, which an option of SPI2, without MCK signal)**
+* PB12 (I2S2_WS / SPI2_NSS) → LRCL (WS)
+* PB13 (I2S2_CK / SPI2_SCK) → BCLK (CLK)
+* PB14 (GPIO / SPI2_MISO) → SEL (SEL)
+* PB15 (I2S2_SD / SPI2_MOSI) → DOUT (DATA)
+
+## Task to do 
+* Find the register used for I2C and find the register to use for I2S
+* Find the files to implement I2S registers
+* Implement I2S
+* Get the data module and analyisis the data
+* Use the data to steer the robot

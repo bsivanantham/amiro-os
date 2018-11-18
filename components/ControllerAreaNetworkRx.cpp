@@ -171,6 +171,11 @@ int16_t ControllerAreaNetworkRx::getGyroscopeValue(int axis)
   return this->gyroscopeValue[axis];
 }
 
+int16_t ControllerAreaNetworkRx::getSound(float raw_sound)
+{
+  return raw_sound;
+}
+
 
 uint16_t ControllerAreaNetworkRx::getProximityFloorValue(int index) {
   return this->proximityFloorValue[index];

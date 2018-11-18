@@ -39,7 +39,13 @@ void boardInit(void) {
    *   JTAG disabled and SWD enabled
    */
   AFIO->MAPR = AFIO_MAPR_SWJ_CFG_JTAGDISABLE |
-               AFIO_MAPR_USART3_REMAP_PARTIALREMAP;
+               AFIO_MAPR_USART3_REMAP_PARTIALREMAP |
+               AFIO_MAPR_SPI1_REMAP;
+}
+
+inline void boardReadAudio(void)
+{
+  palSetPad(GPIOB, GPIOB_WL_MOSI);
 }
 
 inline void boardRequestShutdown(void)

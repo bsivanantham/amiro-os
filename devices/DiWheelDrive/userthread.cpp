@@ -266,7 +266,7 @@ void defuzzyfication(colorMember (&member)[4], int (&rpmFuzzyCtrl)[2]) {
 			// turn right
 			copyRpmSpeed(rpmTurnRight, rpmFuzzyCtrl);
 		}
-	// no sensor detects anything 
+	// no sensor detects anything
 	} else {
 		// line is lost -> stop
 		copyRpmSpeed(rpmHalt, rpmFuzzyCtrl);
@@ -275,18 +275,18 @@ void defuzzyfication(colorMember (&member)[4], int (&rpmFuzzyCtrl)[2]) {
 	return;
 }
 
-Color memberToLed(colorMember member) {
-	switch (member) {
-		case BLACK:
-			return Color(Color::GREEN);
-		case GREY:
-			return Color(Color::YELLOW);
-		case WHITE:
-			return Color(Color::RED);
-		default:
-			return Color(Color::WHITE);
-	}
-}
+// Color memberToLed(colorMember member) {
+// 	switch (member) {
+// 		case BLACK:
+// 			return Color(Color::GREEN);
+// 		case GREY:
+// 			return Color(Color::YELLOW);
+// 		case WHITE:
+// 			return Color(Color::RED);
+// 		default:
+// 			return Color(Color::WHITE);
+// 	}
+// }
 
 // Line following by a fuzzy controler
 void lineFollowing(int (&proximity)[4], int (&rpmFuzzyCtrl)[2]) {
@@ -307,10 +307,10 @@ void lineFollowing(int (&proximity)[4], int (&rpmFuzzyCtrl)[2]) {
 	member[constants::DiWheelDrive::PROX_WHEEL_RIGHT] = getMember(rightWheelFuzzyMemberValues);
 
 	// visualize sensors via LEDs
-	global.robot.setLightColor(constants::LightRing::LED_WNW, memberToLed(member[constants::DiWheelDrive::PROX_WHEEL_LEFT]));
-	global.robot.setLightColor(constants::LightRing::LED_NNW, memberToLed(member[constants::DiWheelDrive::PROX_FRONT_LEFT]));
-	global.robot.setLightColor(constants::LightRing::LED_NNE, memberToLed(member[constants::DiWheelDrive::PROX_FRONT_RIGHT]));
-	global.robot.setLightColor(constants::LightRing::LED_ENE, memberToLed(member[constants::DiWheelDrive::PROX_WHEEL_RIGHT]));
+	// global.robot.setLightColor(constants::LightRing::LED_WNW, memberToLed(member[constants::DiWheelDrive::PROX_WHEEL_LEFT]));
+	// global.robot.setLightColor(constants::LightRing::LED_NNW, memberToLed(member[constants::DiWheelDrive::PROX_FRONT_LEFT]));
+	// global.robot.setLightColor(constants::LightRing::LED_NNE, memberToLed(member[constants::DiWheelDrive::PROX_FRONT_RIGHT]));
+	// global.robot.setLightColor(constants::LightRing::LED_ENE, memberToLed(member[constants::DiWheelDrive::PROX_WHEEL_RIGHT]));
 
 //	chprintf((BaseSequentialStream*) &SD1, "Left: BLACK: %f, GREY: %f, WHITE: %f\r\n", leftFuzzyMemberValues[BLACK], leftFuzzyMemberValues[GREY], leftFuzzyMemberValues[WHITE]);
 //	chprintf((BaseSequentialStream*) &SD1, "Right: BLACK: %f, GREY: %f, WHITE: %f\r\n", rightFuzzyMemberValues[BLACK], rightFuzzyMemberValues[GREY], rightFuzzyMemberValues[WHITE]);
@@ -351,9 +351,9 @@ UserThread::main()
 	 * SETUP
 	 */
 	int rpmFuzzyCtrl[2] = {0};
-    for (uint8_t led = 0; led < 8; ++led) {
-		global.robot.setLightColor(led, Color(Color::BLACK));
-    }
+    // for (uint8_t led = 0; led < 8; ++led) {
+		// global.robot.setLightColor(led, Color(Color::BLACK));
+    // }
     running = false;
 
 	/*
@@ -378,20 +378,20 @@ UserThread::main()
                 // start the robot
                 running = true;
             }
-            // set the front LEDs to blue for one second
-            global.robot.setLightColor(constants::LightRing::LED_SSW, Color(Color::BLACK));
-            global.robot.setLightColor(constants::LightRing::LED_WSW, Color(Color::BLACK));
-            global.robot.setLightColor(constants::LightRing::LED_WNW, Color(Color::WHITE));
-            global.robot.setLightColor(constants::LightRing::LED_NNW, Color(Color::WHITE));
-            global.robot.setLightColor(constants::LightRing::LED_NNE, Color(Color::WHITE));
-            global.robot.setLightColor(constants::LightRing::LED_ENE, Color(Color::WHITE));
-            global.robot.setLightColor(constants::LightRing::LED_ESE, Color(Color::BLACK));
-            global.robot.setLightColor(constants::LightRing::LED_SSE, Color(Color::BLACK));
-            this->sleep(MS2ST(1000));
-            global.robot.setLightColor(constants::LightRing::LED_WNW, Color(Color::BLACK));
-            global.robot.setLightColor(constants::LightRing::LED_NNW, Color(Color::BLACK));
-            global.robot.setLightColor(constants::LightRing::LED_NNE, Color(Color::BLACK));
-            global.robot.setLightColor(constants::LightRing::LED_ENE, Color(Color::BLACK));
+            //set the front LEDs to blue for one second
+            // global.robot.setLightColor(constants::LightRing::LED_SSW, Color(Color::BLACK));
+            // global.robot.setLightColor(constants::LightRing::LED_WSW, Color(Color::BLACK));
+            // global.robot.setLightColor(constants::LightRing::LED_WNW, Color(Color::WHITE));
+            // global.robot.setLightColor(constants::LightRing::LED_NNW, Color(Color::WHITE));
+            // global.robot.setLightColor(constants::LightRing::LED_NNE, Color(Color::WHITE));
+            // global.robot.setLightColor(constants::LightRing::LED_ENE, Color(Color::WHITE));
+            // global.robot.setLightColor(constants::LightRing::LED_ESE, Color(Color::BLACK));
+            // global.robot.setLightColor(constants::LightRing::LED_SSE, Color(Color::BLACK));
+            // this->sleep(MS2ST(1000));
+            // global.robot.setLightColor(constants::LightRing::LED_WNW, Color(Color::BLACK));
+            // global.robot.setLightColor(constants::LightRing::LED_NNW, Color(Color::BLACK));
+            // global.robot.setLightColor(constants::LightRing::LED_NNE, Color(Color::BLACK));
+            // global.robot.setLightColor(constants::LightRing::LED_ENE, Color(Color::BLACK));
         }
 
         if (running) {
@@ -416,4 +416,3 @@ UserThread::main()
 
   return RDY_OK;
 }
-

@@ -1,5 +1,6 @@
 #include "ch.hpp"
 #include "hal.h"
+#include "qei.h"
 
 #include "LightRing.h"
 
