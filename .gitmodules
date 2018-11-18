@@ -1,0 +1,10 @@
+[submodule "kernel/ChibiOS"]
+	path = kernel/ChibiOS
+	url = https://github.com/ChibiOS/ChibiOS.git
+	ignore = dirty
+[submodule "bootloader/AMiRo-BLT"]
+	path = bootloader/AMiRo-BLT
+	url = http://openresearch.cit-ec.de/git/amiro-os.amiro-blt.git
+[submodule "periphery-lld/AMiRo-LLD"]
+	path = periphery-lld/AMiRo-LLD
+	url = http://openresearch.cit-ec.de/git/amiro-os.amiro-lld.git

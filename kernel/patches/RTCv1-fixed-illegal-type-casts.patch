@@ -1,0 +1,34 @@
+From 6a763db09751ded7e11e531825c1c12d9fbecca9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Thomas=20Sch=C3=B6pping?= <tschoepp@cit-ec.uni-bielefeld.de>
+Date: Fri, 13 Jul 2018 16:21:27 +0200
+Subject: [PATCH] RTCv1: Fixed illegal type casts (from pointer to arithmetic type to pointer to real type).
+
+---
+ os/hal/ports/STM32/LLD/RTCv1/hal_rtc_lld.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/os/hal/ports/STM32/LLD/RTCv1/hal_rtc_lld.c b/os/hal/ports/STM32/LLD/RTCv1/hal_rtc_lld.c
+index df4b7e7..fedce93 100644
+--- a/os/hal/ports/STM32/LLD/RTCv1/hal_rtc_lld.c
++++ b/os/hal/ports/STM32/LLD/RTCv1/hal_rtc_lld.c
+@@ -130,14 +130,15 @@ static void rtc_decode(uint32_t tv_sec,
+                        RTCDateTime *timespec) {
+   struct tm tim;
+   struct tm *t;
++  const time_t time = tv_sec;
+ 
+   /* If the conversion is successful the function returns a pointer
+      to the object the result was written into.*/
+ #if defined(__GNUC__) || defined(__CC_ARM)
+-  t = localtime_r((time_t *)&(tv_sec), &tim);
++  t = localtime_r(&time, &tim);
+   osalDbgAssert(t != NULL, "conversion failed");
+ #else
+-  t = localtime(&tv_sec);
++  t = localtime(&time);
+   memcpy(&tim, t, sizeof(struct tm));
+ #endif
+ 
+-- 
+2.7.4
+
