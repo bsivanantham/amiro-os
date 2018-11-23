@@ -109,10 +109,10 @@
                                  PIN_MODE_INPUT_PULLX(GPIOB_WL_GDO0) | \
                                  PIN_MODE_ALTERNATE_OPENDRAIN(GPIOB_MEM_SCL) | \
                                  PIN_MODE_ALTERNATE_OPENDRAIN(GPIOB_MEM_SDA) | \
-                                 PIN_MODE_OUTPUT_PUSHPULL(GPIOB_WL_SS_N) | \
+                                 PIN_MODE_ALTERNATE_PUSHPULL(GPIOB_WL_SS_N) | \
                                  PIN_MODE_ALTERNATE_PUSHPULL(GPIOB_WL_SCLK) | \
-                                 PIN_MODE_INPUT(GPIOB_WL_MISO) | \
-                                 PIN_MODE_ALTERNATE_PUSHPULL(GPIOB_WL_MOSI))
+                                 PIN_MODE_OUTPUT_PUSHPULL(GPIOB_WL_MISO) | \
+                                 PIN_MODE_INPUT(GPIOB_WL_MOSI))
 #define VAL_GPIOBODR            0xFFFB /* initially LASER_EN is deactivated */
 
 /*
@@ -178,6 +178,7 @@ extern "C" {
   void boardInit(void);
   void boardRequestShutdown(void);
   void boardStandby(void);
+  void boardReadAudio(void);
   void boardClearI2CBus(const uint8_t scl_pad, const uint8_t sda_pad);
 #ifdef __cplusplus
 }

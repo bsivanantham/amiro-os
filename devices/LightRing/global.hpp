@@ -60,14 +60,11 @@ public:
   //   SPI_I2SCFGR_CHLEN,
   //   SPI_I2SPR_MCKOE
   // };
-  //    SPI_I2SCFGR_CHLEN | SPI_I2SCFGR_DATLEN | SPI_I2SCFGR_CKPOL | \
-      SPI_I2SCFGR_I2SSTD | SPI_I2SCFGR_PCMSYNC | SPI_I2SCFGR_I2SCFG | \
-      SPI_I2SCFGR_I2SE | SPI_I2SCFGR_I2SMOD,
+
 
   //I2S driver global implementation
-  #define I2S_BUF_SIZE        256
-  uint16_t i2s_rx_buf[I2S_BUF_SIZE];
-  uint16_t i2s_tx_buf[I2S_BUF_SIZE];
+  #define I2S_BUF_SIZE        1250
+  uint32_t i2s_rx_buf[I2S_BUF_SIZE];
 
   //dummy function
   static void i2scallback(I2SDriver *i2sp, size_t offset, size_t n){
@@ -77,12 +74,12 @@ public:
   }
 
   I2SConfig i2scfg {
-    i2s_tx_buf,
+    NULL,
     i2s_rx_buf,
     I2S_BUF_SIZE,
     i2scallback,
-    SPI_I2SCFGR_DATLEN_0 | SPI_I2SCFGR_DATLEN_1,
-    SPI_I2SPR_MCKOE | SPI_I2SCFGR_CKPOL
+    (0 << 4) | (0 << 3) | (1 << 1) | (1 << 0),
+    17<<0 | 1<<8
   };
 
   /**
@@ -90,6 +87,7 @@ public:
    * Conected devices:
    *   AT24Cxx
    */
+
   HWI2CDriver HW_I2C2;
 
   HWSPIDriver HW_SPI1;

@@ -551,8 +551,11 @@ int main(void) {
       chprintf((BaseSequentialStream*) &SD1, "Bootloader incompatible\n");
       break;
   }
+
   chprintf((BaseSequentialStream*) &SD1, "ChibiOS " CH_KERNEL_VERSION "\n");
   // make sure that the info text is completetly printed
+
+
   BaseThread::sleep(10);
 
   extStart(&EXTD1, &extcfg);
