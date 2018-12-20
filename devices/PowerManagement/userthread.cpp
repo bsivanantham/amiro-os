@@ -111,13 +111,13 @@ UserThread::main()
         {
           if (next_state == OBSTACLE_AVOIDANCE) {
             // set all LEDs to white for one second
-            for (uint8_t led = 0; led < 8; ++led) {
-              global.robot.setLightColor(led, Color(Color::WHITE));
-            }
+            // for (uint8_t led = 0; led < 8; ++led) {
+            //   global.robot.setLightColor(led, Color(Color::WHITE));
+            // }
             this->sleep(MS2ST(1000));
-            for (uint8_t led = 0; led < 8; ++led) {
-              global.robot.setLightColor(led, Color(Color::BLACK));
-            }
+            // for (uint8_t led = 0; led < 8; ++led) {
+            //   global.robot.setLightColor(led, Color(Color::BLACK));
+            // }
           }
           /* if (this->next_state == WII_STEERING) */ else {
             // setup bluetooth
@@ -125,14 +125,14 @@ UserThread::main()
             wii_steering::btserial.bluetoothSerialListen("ALL");
 
             // set LEDs: front = green; rear = red; sides = blue
-            global.robot.setLightColor(constants::LightRing::LED_NNW, Color(Color::GREEN));
-            global.robot.setLightColor(constants::LightRing::LED_NNE, Color(Color::GREEN));
-            global.robot.setLightColor(constants::LightRing::LED_SSW, Color(Color::RED));
-            global.robot.setLightColor(constants::LightRing::LED_SSE, Color(Color::RED));
-            global.robot.setLightColor(constants::LightRing::LED_WNW, Color(Color::BLUE));
-            global.robot.setLightColor(constants::LightRing::LED_WSW, Color(Color::BLUE));
-            global.robot.setLightColor(constants::LightRing::LED_ENE, Color(Color::BLUE));
-            global.robot.setLightColor(constants::LightRing::LED_ESE, Color(Color::BLUE));
+            // global.robot.setLightColor(constants::LightRing::LED_NNW, Color(Color::GREEN));
+            // global.robot.setLightColor(constants::LightRing::LED_NNE, Color(Color::GREEN));
+            // global.robot.setLightColor(constants::LightRing::LED_SSW, Color(Color::RED));
+            // global.robot.setLightColor(constants::LightRing::LED_SSE, Color(Color::RED));
+            // global.robot.setLightColor(constants::LightRing::LED_WNW, Color(Color::BLUE));
+            // global.robot.setLightColor(constants::LightRing::LED_WSW, Color(Color::BLUE));
+            // global.robot.setLightColor(constants::LightRing::LED_ENE, Color(Color::BLUE));
+            // global.robot.setLightColor(constants::LightRing::LED_ESE, Color(Color::BLUE));
 
             chprintf((BaseSequentialStream*)&global.sercanmux1, "press buttons '1' and '2' to connect\n");
           }
@@ -428,4 +428,3 @@ UserThread::setWiiDeadzone(const float deadzone)
   wii_steering::deadzone = dz;
   return dz;
 }
-

@@ -14,6 +14,7 @@
 #include <amiro/Lidar.h>
 #include <amiro/serial_reset/serial_can_mux.hpp>
 #include <userthread.hpp>
+#include <complex>
 
 
 namespace amiro {
@@ -61,27 +62,6 @@ public:
   //   SPI_I2SPR_MCKOE
   // };
 
-
-  //I2S driver global implementation
-  #define I2S_BUF_SIZE        1250
-  uint32_t i2s_rx_buf[I2S_BUF_SIZE];
-
-  //dummy function
-  static void i2scallback(I2SDriver *i2sp, size_t offset, size_t n){
-    (void)i2sp;
-    (void)offset;
-    (void)n;
-  }
-
-  I2SConfig i2scfg {
-    NULL,
-    i2s_rx_buf,
-    I2S_BUF_SIZE,
-    i2scallback,
-    (0 << 4) | (0 << 3) | (1 << 1) | (1 << 0),
-    17<<0 | 1<<8
-  };
-
   /**
    * @brief I2C Bus 2
    * Conected devices:
@@ -102,13 +82,39 @@ public:
 
   SerialCanMux sercanmux1;
 
-
-
   Lidar lidar;
 
   UserThread userThread;
 
   uint8_t shellTermID;
+
+  //I2S driver global implementation
+  #define I2S_BUF_SIZE      2000
+  //typedef std::complex<double> cplx;
+  uint32_t i2s_rx_buf[I2S_BUF_SIZE];
+  //uint32_t i2s_norm_rx_buf[I2S_NORM_BUF_SIZE];
+  // uint32_t i2s_fft_buf[I2S_NORM_BUF_SIZE];
+
+  //dummy function
+  static void i2scallback(I2SDriver *i2sp, size_t offset, size_t n){
+    (void)i2sp;
+    (void)offset;
+    (void)n;
+    // chprintf((BaseSequentialStream*)&sercanmux1,"callback \n");
+  }
+
+  // (0 << 4) | (0 << 3) | (1 << 1) | (1 << 0),
+  // 17<<0 | 1<<8
+
+  I2SConfig i2scfg {
+    NULL,
+    i2s_rx_buf,
+    I2S_BUF_SIZE,
+    i2scallback,
+    (0 << 11) |(0 << 10) | (0 << 9) | (0 << 8) | (0 << 7) | (0 << 5) | (0 << 4) | (1 << 3) | (1 << 2) | (0 << 1) | (1 << 0),
+    (1 << 8) | (17 << 0)
+  };
+
 
 public:
   Global() :
