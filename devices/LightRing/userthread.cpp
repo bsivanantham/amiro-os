@@ -48,17 +48,14 @@ for (size_t i = 1, k = 0; i < I2S_BUF_SIZE; i += 2) {
   for (size_t j = 1, n = 0; j < I2S_BUF_SIZE; j += 2) {
     uint32_t raw = global.i2s_rx_buf[j];
     int16_t d = raw & 0x0000FFFF;
-    // chprintf((BaseSequentialStream*)&global.sercanmux1,"k= %d, n= %d, data= %d\n", k, n, d);
     Complex fft_val = std::polar(1.0, -2 * PI * k * n / (999)) * (d*1.0);
     fft_val_real += real(fft_val);
     fft_val_imag += imag(fft_val);
-    // chprintf((BaseSequentialStream*)&global.sercanmux1,"real= %f, imag= %f\n", real(fft_val), imag(fft_val));
     n++;
   }
-  // chprintf((BaseSequentialStream*)&global.sercanmux1,"real= %f, imag= %f\n", fft_val_real, fft_val_imag);
-   double absolute = sqrt(pow(fft_val_real, 2.0) + pow(fft_val_imag, 2.0));
+  double absolute = sqrt(pow(fft_val_real, 2.0) + pow(fft_val_imag, 2.0));
   i2s_fft_buf[k] = absolute;
-  chprintf((BaseSequentialStream*)&global.sercanmux1,"%d,%d,%f,%f\n", k, d1, absolute, i2s_fft_buf[k]);
+  chprintf((BaseSequentialStream*)&global.sercanmux1,"%d,%d,%f,%f\n", k, d1, absolute, i2s_fft_buf[k]); //(k->value, raw(d1)->data, absolute or i2i2s_fft_buf -> complex)
   k++;
 }
 //double absolute_fft_val ;
@@ -79,7 +76,7 @@ UserThread::main()
   i2sInit();
   while (!this->shouldTerminate())
   {
-    chprintf((BaseSequentialStream*)&global.sercanmux1,"inside While \n");
+     chprintf((BaseSequentialStream*)&global.sercanmux1,"inside While \n");
      //chprintf((BaseSequentialStream*)&global.sercanmux1,"ROBOT MOVING \n");
      //kinematic = {10000000, 10000000, 10000000, 10000000, 10000000, 10000000};;
 
@@ -105,19 +102,18 @@ UserThread::main()
 
      chprintf((BaseSequentialStream*)&global.sercanmux1,"print data \n");
      fourier_analysis_two_channel();
-     // for (size_t i = 0; i < I2S_BUF_SIZE; i++) {
-        // uint32_t raw = global.i2s_rx_buf[i];
-        // uint32_t a = ((raw & 0x0000FFFF) << 16) | ((raw & 0xFFFF0000) >> 16);
-        // int32_t b = ((raw & 0x0000FFFF) << 16) | ((raw & 0xFFFF0000) >> 16);
-        // uint16_t c = raw & 0x0000FFFF;
-        // int16_t d = raw & 0x0000FFFF;
-        // double fa = fourier_analysis_one_channel(d,i);
-        // double fb = fourier_analysis_two_channel(d,i);
-
-        //uint32_t a_24 = ((raw & 0x0000FFFF) << 8) | ((raw & 0xFF000000) >> 24);
-
-        // chprintf((BaseSequentialStream*)&global.sercanmux1,"%d,%d,%f,%f\n", i, d, fa, fb);
+     // for (size_t i = 1; i < I2S_BUF_SIZE; i=i+2) {
+     //    uint32_t raw = global.i2s_rx_buf[i];
+     //    // uint32_t a = ((raw & 0x0000FFFF) << 16) | ((raw & 0xFFFF0000) >> 16);
+     //    // int32_t b = ((raw & 0x0000FFFF) << 16) | ((raw & 0xFFFF0000) >> 16);
+     //    uint16_t c = raw & 0x0000FFFF;
+     //    // int16_t d = raw & 0x0000FFFF;
+     //
+     //    chprintf((BaseSequentialStream*)&global.sercanmux1,"%d,%d\n",i,c);
      // }
+     // double absolute = sqrt(pow(4, 2.0) + pow(0, 2.0));
+     // chprintf((BaseSequentialStream*)&global.sercanmux1,"square_rooz: %f\n",absolute);
+     this->sleep(MS2ST(1000));
      this->sleep(MS2ST(1000));
      this->sleep(MS2ST(1000));
      this->sleep(MS2ST(1000));
