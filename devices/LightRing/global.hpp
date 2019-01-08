@@ -2,7 +2,6 @@
 #define AMIRO_GLOBAL_HPP_
 
 #include <hal.h>
-#include <ch.hpp>
 
 #include <board.h>
 #include <amiro/bus/i2c/HWI2CDriver.hpp>
@@ -49,18 +48,6 @@ public:
     /* initialzation data          */ SPI_CR1_BR_0 | SPI_CR1_BR_1
   };
 
-  // I2SDriver i2sDriver;
-  //
-  // // const size_t buffer_size = 1 /* addressing */+  1; /* who am i */
-  // uint8_t buffer[4];
-  // I2SConfig i2sConfig{
-  //   buffer,
-  //   buffer,
-  //   4,
-  //   nullptr,
-  //   SPI_I2SCFGR_CHLEN,
-  //   SPI_I2SPR_MCKOE
-  // };
 
   /**
    * @brief I2C Bus 2
@@ -123,7 +110,7 @@ public:
     tlc5947(&HW_SPI1, GPIOA, GPIOA_LIGHT_BLANK),
     at24c01(0x400u / 0x08u, 0x08u, 500u, &HW_I2C2),
     memory(at24c01, /*BMSV*/ 1, /*bmsv*/ 2, /*HMV*/ 1, /*hmv*/ 0),
-    robot(&CAND1,&tlc5947,&memory),
+    robot(&CAND1, &tlc5947, &memory),
     sercanmux1(&SD1, &CAND1, CAN::LIGHT_RING_ID),
     lidar(CAN::LIGHT_RING_ID, Lidar::SETUP::POWER_ONLY),
     userThread()

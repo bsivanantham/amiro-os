@@ -111,7 +111,6 @@ CPPSRC = $(CHCPPSRC) \
          $(AMIRO)/components/ControllerAreaNetworkRx.cpp \
          $(AMIRO)/components/ControllerAreaNetworkTx.cpp \
          $(AMIRO)/components/Lidar.cpp \
-				 $(AMIRO)/components/spk_3421.cpp \
          $(AMIRO)/components/serial_reset/serial_can_mux.cpp \
          LightRing.cpp \
          userthread.cpp \

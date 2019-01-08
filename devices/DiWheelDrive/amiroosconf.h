@@ -16,4 +16,3 @@
 #endif
 
 #endif // AMIRO_AMIROOSCONF_H_
-

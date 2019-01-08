@@ -85,19 +85,15 @@
 /*
  * I2C driver system settings.
  */
-#define STM32_I2C_USE_I2C1                  FALSE
-#define STM32_I2C_USE_I2C2                  TRUE
-// #define STM32_I2C_I2C1_RX_DMA_STREAM        STM32_DMA_STREAM_ID(1, 0)
-// #define STM32_I2C_I2C1_TX_DMA_STREAM        STM32_DMA_STREAM_ID(1, 6)
-// #define STM32_I2C_I2C2_RX_DMA_STREAM        STM32_DMA_STREAM_ID(1, 2)
-// #define STM32_I2C_I2C2_TX_DMA_STREAM        STM32_DMA_STREAM_ID(1, 7)
-#define STM32_I2C_I2C1_IRQ_PRIORITY         5
-#define STM32_I2C_I2C2_IRQ_PRIORITY         5
-#define STM32_I2C_I2C1_DMA_PRIORITY         3
-#define STM32_I2C_I2C2_DMA_PRIORITY         3
-#define STM32_I2C_I2C1_DMA_ERROR_HOOK()     chSysHalt()
-#define STM32_I2C_I2C2_DMA_ERROR_HOOK()     chSysHalt()
-#define STM32_I2C_USE_DMA                   FALSE
+ #define STM32_I2C_USE_I2C1                  FALSE
+ #define STM32_I2C_USE_I2C2                  TRUE
+ #define STM32_I2C_I2C1_IRQ_PRIORITY         5
+ #define STM32_I2C_I2C2_IRQ_PRIORITY         5
+ #define STM32_I2C_I2C1_DMA_PRIORITY         3
+ #define STM32_I2C_I2C2_DMA_PRIORITY         3
+ #define STM32_I2C_I2C1_DMA_ERROR_HOOK()     chSysHalt()
+ #define STM32_I2C_I2C2_DMA_ERROR_HOOK()     chSysHalt()
+ #define STM32_I2C_USE_DMA                   FALSE
 
 /*
  * I2S driver system settings.
@@ -185,32 +181,21 @@
 /*
  * UART driver system settings.
  */
-#define STM32_UART_USE_USART1               FALSE
-#define STM32_UART_USE_USART2               FALSE
-#define STM32_UART_USE_USART3               FALSE
-// #define STM32_UART_USART1_RX_DMA_STREAM     STM32_DMA_STREAM_ID(2, 5)
-// #define STM32_UART_USART1_TX_DMA_STREAM     STM32_DMA_STREAM_ID(2, 7)
-// #define STM32_UART_USART2_RX_DMA_STREAM     STM32_DMA_STREAM_ID(1, 5)
-// #define STM32_UART_USART2_TX_DMA_STREAM     STM32_DMA_STREAM_ID(1, 6)
-// #define STM32_UART_USART3_RX_DMA_STREAM     STM32_DMA_STREAM_ID(1, 1)
-// #define STM32_UART_USART3_TX_DMA_STREAM     STM32_DMA_STREAM_ID(1, 3)
-#define STM32_UART_USART1_IRQ_PRIORITY      12
-#define STM32_UART_USART2_IRQ_PRIORITY      12
-#define STM32_UART_USART3_IRQ_PRIORITY      12
-#define STM32_UART_USART1_DMA_PRIORITY      0
-#define STM32_UART_USART2_DMA_PRIORITY      0
-#define STM32_UART_USART3_DMA_PRIORITY      0
-#define STM32_UART_DMA_ERROR_HOOK(uartp)    chSysHalt()
+ #define STM32_UART_USE_USART1               FALSE
+ #define STM32_UART_USE_USART2               FALSE
+ #define STM32_UART_USE_USART3               FALSE
+ #define STM32_UART_USART1_IRQ_PRIORITY      12
+ #define STM32_UART_USART2_IRQ_PRIORITY      12
+ #define STM32_UART_USART3_IRQ_PRIORITY      12
+ #define STM32_UART_USART1_DMA_PRIORITY      0
+ #define STM32_UART_USART2_DMA_PRIORITY      0
+ #define STM32_UART_USART3_DMA_PRIORITY      0
+ #define STM32_UART_DMA_ERROR_HOOK(uartp)    chSysHalt()
 
 /*
  * USB driver system settings.
  */
- #define STM32_USB_USE_OTG1                  FALSE
- #define STM32_USB_USE_OTG2                  FALSE
- #define STM32_USB_OTG1_IRQ_PRIORITY         14
- #define STM32_USB_OTG2_IRQ_PRIORITY         14
- #define STM32_USB_OTG1_RX_FIFO_SIZE         512
- #define STM32_USB_OTG2_RX_FIFO_SIZE         1024
- #define STM32_USB_OTG_THREAD_PRIO           LOWPRIO
- #define STM32_USB_OTG_THREAD_STACK_SIZE     128
- #define STM32_USB_OTGFIFO_FILL_BASEPRI      0
+ #define STM32_USB_USE_USB1                  FALSE
+ #define STM32_USB_LOW_POWER_ON_SUSPEND      FALSE
+ #define STM32_USB_USB1_HP_IRQ_PRIORITY      13
+ #define STM32_USB_USB1_LP_IRQ_PRIORITY      14
