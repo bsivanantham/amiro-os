@@ -2,6 +2,7 @@
 #define AMIRO_GLOBAL_HPP_
 
 #include <hal.h>
+#include <ch.hpp>
 
 #include <board.h>
 #include <amiro/bus/i2c/HWI2CDriver.hpp>

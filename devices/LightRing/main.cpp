@@ -208,6 +208,8 @@ void systemShutdown() {
   global.tlc5947.update();
   global.tlc5947.wait();
 
+  // i2sStop(&I2SD2);
+
   global.lidar.requestTerminate();
   global.lidar.wait();
 
@@ -528,7 +530,7 @@ int main(void) {
   /*
   * i2s start
   */
-  //i2sStart(&I2SD2, &global.i2scfg);
+  // i2sStart(&I2SD2, &global.i2scfg);
 
   chprintf((BaseSequentialStream*) &SD1, "\n");
   chprintf((BaseSequentialStream*) &SD1, BOARD_NAME " " BOARD_VERSION "\n");

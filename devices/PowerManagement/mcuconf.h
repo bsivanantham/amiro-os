@@ -140,6 +140,20 @@
 #define STM32_I2C_I2C3_DMA_ERROR_HOOK()     chSysHalt()
 #define STM32_I2C_USE_DMA                   TRUE
 
+
+/*
+ * I2S driver system settings.
+ * tag:enabled I2S
+ */
+#define STM32_I2S_USE_SPI2                  FALSE
+#define STM32_I2S_USE_SPI3                  FALSE
+#define STM32_I2S_SPI2_IRQ_PRIORITY         10
+#define STM32_I2S_SPI3_IRQ_PRIORITY         10
+#define STM32_I2S_SPI2_DMA_PRIORITY         1
+#define STM32_I2S_SPI3_DMA_PRIORITY         1
+#define STM32_I2S_SPI2_DMA_ERROR_HOOK()     chSysHalt()
+#define STM32_I2S_SPI3_DMA_ERROR_HOOK()     chSysHalt()
+
 /*
  * ICU driver system settings.
  */
