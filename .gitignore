@@ -5,6 +5,7 @@ build
 
 # Eclipse files
 *eclipse*
+.settings
 
 # QtCreator files
 *.includes
