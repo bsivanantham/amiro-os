@@ -21,6 +21,14 @@ typedef std::complex<double> Complex;
 #define I2S_fft_BUF_SIZE      1000
 double i2s_fft_buf[I2S_fft_BUF_SIZE];
 
+void light_on_n_m(int from, int to, const Color& color);
+void light_on_n_m_100ms(int from, int to, UserThread& u,const Color& color);
+void light_off_n(int n);
+void light_off_n_100ms(int n, UserThread& u);
+void light_show(UserThread& u, double abs_fft, double frequency, int i);
+void light_show(UserThread& u);
+void fourier_analysis(UserThread& u);
+
 UserThread::UserThread() :
   chibios_rt::BaseStaticThread<USER_THREAD_STACK_SIZE>()
 {
@@ -36,61 +44,16 @@ void light_on_n_m(int from, int to, const Color& color){
   }
 }
 
-void light_off_n(int n){
-  for(int i = 7; i >= 8-n; i--){
-    global.robot.setLightColor(i, Color(Color::BLACK));
-  }
-}
-
-void fourier_analysis() {
-  chprintf((BaseSequentialStream*)&global.sercanmux1,"i, k, frequency, d1, d1, i2s_fft_buf[k]\n");
-  double PI = 3.141592653589793238460;
-  bool color_switch = false;
-  for (size_t i = 1, k = 0; i < I2S_BUF_SIZE; i = i + 2) {
-    if(color_switch){
-      color_switch = false;
-      light_on_n_m(0, 7, Color::DARKRED);
-    } else {
-      color_switch = true;
-      light_on_n_m(0, 7, Color::BLUE);
-    }
-    uint32_t raw1 = global.i2s_rx_buf[i] /*& 0x0000FFFF*/;
-    int16_t d1 = raw1 & 0x0000FFFF;
-
-    double fft_val_real = 0.0;
-    double fft_val_imag = 0.0;
-    if(d1 == 0){;
-      d1 = (raw1 >> 16) & 0x0000FFFF;
-    }
-    double absolute = 0.0;
-    if(k != 0 && k != I2S_fft_BUF_SIZE-1){
-      for (size_t j = 1, n = 0; j < I2S_BUF_SIZE; j = j + 2) {
-        uint32_t raw = global.i2s_rx_buf[j];
-        int16_t d = raw & 0x0000FFFF;
-        if(d == 0){
-          d = (raw >> 16) & 0x0000FFFF;
-          // chprintf((BaseSequentialStream*)&global.sercanmux1,"%d,%08X\n,", i, d);
-        }
-        Complex fft_val = std::polar(1.0, -2 * PI * k * n / (I2S_fft_BUF_SIZE-1)) * (d*1.0);
-        fft_val_real += real(fft_val);
-        fft_val_imag += imag(fft_val);
-        n++;
-      }
-      absolute = sqrt(pow(fft_val_real, 2.0) + pow(fft_val_imag, 2.0));
-    }
-    i2s_fft_buf[k] = absolute;
-    double frequency = (32000/(double)(I2S_fft_BUF_SIZE-1)) * (double)k;
-    chprintf((BaseSequentialStream*)&global.sercanmux1,"%d,%d,%f,%d,%08X,%f\n", i, k, frequency, d1, d1, i2s_fft_buf[k]);
-    k++;
-    //chprintf((BaseSequentialStream*)&global.sercanmux1,"%d,%d\n", i, d1);
-  }
-  light_off_n(8);
-}
-
 void light_on_n_m_100ms(int from, int to, UserThread& u,const Color& color){
   for(int i = from; i <= to; i++){
     u.sleep(MS2ST(100));
     global.robot.setLightColor(i, Color(color));
+  }
+}
+
+void light_off_n(int n){
+  for(int i = 7; i >= 8-n; i--){
+    global.robot.setLightColor(i, Color(Color::BLACK));
   }
 }
 
@@ -99,6 +62,71 @@ void light_off_n_100ms(int n, UserThread& u){
     u.sleep(MS2ST(100));
     global.robot.setLightColor(i, Color(Color::BLACK));
   }
+}
+
+void light_show(UserThread& u, double abs_fft, double frequency, int i){
+  // for (size_t i = 0; i < I2S_fft_BUF_SIZE; i++) {
+    // double abs_fft = i2s_fft_buf[i];
+    int32_t highWheelSpeed = 100000000;
+    int32_t lowWheelSpeed = 60000000;
+    if(i == 499){
+      // chprintf((BaseSequentialStream*)&global.sercanmux1,"go backward \n");
+      highWheelSpeed *= -1;
+      lowWheelSpeed *= -1;
+    }
+
+    // set the front LEDs to blue for one second
+    // global.robot.setLightColor(constants::LightRing::LED_SSW, Color(Color::WHITE));
+    // global.robot.setLightColor(constants::LightRing::LED_WSW, Color(Color::WHITE));
+    // global.robot.setLightColor(constants::LightRing::LED_WNW, Color(Color::WHITE));
+    // global.robot.setLightColor(constants::LightRing::LED_NNW, Color(Color::WHITE));
+    // global.robot.setLightColor(constants::LightRing::LED_NNE, Color(Color::WHITE));
+    // global.robot.setLightColor(constants::LightRing::LED_ENE, Color(Color::WHITE));
+    // global.robot.setLightColor(constants::LightRing::LED_ESE, Color(Color::WHITE));
+    // global.robot.setLightColor(constants::LightRing::LED_SSE, Color(Color::WHITE));
+    if(abs_fft > 2000){
+      int light_no = 0;
+      if(frequency > 0 && frequency <= 4000){
+        light_on_n_m(0, 7, Color::RED);
+        global.robot.setTargetSpeed(highWheelSpeed,lowWheelSpeed);
+        light_no = 0;
+      }
+      if(frequency > 4000){
+        light_on_n_m(0, 7, Color::ORENGE);
+        global.robot.setTargetSpeed(lowWheelSpeed,highWheelSpeed);
+        light_no = 1;
+      }
+      if(frequency > 8000){
+        light_on_n_m(0, 7, Color::YELLOW);
+        global.robot.setTargetSpeed(highWheelSpeed,lowWheelSpeed);
+        light_no = 2;
+      }
+      if(frequency > 12000){
+        light_on_n_m(0, 7, Color::GREEN);
+        global.robot.setTargetSpeed(lowWheelSpeed,highWheelSpeed);
+        light_no = 3;
+      }
+      if(frequency > 16000){
+        light_on_n_m(0, 7, Color::BLUE);
+        global.robot.setTargetSpeed(highWheelSpeed,lowWheelSpeed);
+        light_no = 4;
+      }
+      if(frequency > 20000){
+        light_on_n_m(0, 7, Color::INDIGO);
+        global.robot.setTargetSpeed(lowWheelSpeed,highWheelSpeed);
+        light_no = 5;
+      }
+      if(frequency > 24000){
+        light_on_n_m(0, 7, Color::VIOLET);
+        global.robot.setTargetSpeed(highWheelSpeed,lowWheelSpeed);
+        light_no = 7;
+      }
+      if(frequency > 28000 && frequency <= 32000){
+        light_on_n_m(0, 7, Color::WHITE);
+        global.robot.setTargetSpeed(lowWheelSpeed,highWheelSpeed);
+        light_no = 7;
+      }
+    }
 }
 
 void light_show(UserThread& u){
@@ -190,6 +218,52 @@ void light_show(UserThread& u){
     }
     // chprintf((BaseSequentialStream*)&global.sercanmux1,"less than 5000 amplitude \n");
   }
+}
+
+void fourier_analysis(UserThread& u) {
+  chprintf((BaseSequentialStream*)&global.sercanmux1,"i, k, frequency, d1, d1, i2s_fft_buf[k]\n");
+  double PI = 3.141592653589793238460;
+  bool color_switch = false;
+  for (size_t i = 1, k = 0; i < I2S_BUF_SIZE; i = i + 2) {
+    // if(color_switch){
+    //   color_switch = false;
+    //   light_on_n_m(0, 7, Color::DARKRED);
+    // } else {
+    //   color_switch = true;
+    //   light_on_n_m(0, 7, Color::BLUE);
+    // }
+    uint32_t raw1 = global.i2s_rx_buf[i] /*& 0x0000FFFF*/;
+    int16_t d1 = raw1 & 0x0000FFFF;
+
+    double fft_val_real = 0.0;
+    double fft_val_imag = 0.0;
+    if(d1 == 0){;
+      d1 = (raw1 >> 16) & 0x0000FFFF;
+    }
+    double absolute = 0.0;
+    if(k != 0 && k != I2S_fft_BUF_SIZE-1){
+      for (size_t j = 1, n = 0; j < I2S_BUF_SIZE; j = j + 2) {
+        uint32_t raw = global.i2s_rx_buf[j];
+        int16_t d = raw & 0x0000FFFF;
+        if(d == 0){
+          d = (raw >> 16) & 0x0000FFFF;
+          // chprintf((BaseSequentialStream*)&global.sercanmux1,"%d,%08X\n,", i, d);
+        }
+        Complex fft_val = std::polar(1.0, -2 * PI * k * n / (I2S_fft_BUF_SIZE-1)) * (d*1.0);
+        fft_val_real += real(fft_val);
+        fft_val_imag += imag(fft_val);
+        n++;
+      }
+      absolute = sqrt(pow(fft_val_real, 2.0) + pow(fft_val_imag, 2.0));
+    }
+    i2s_fft_buf[k] = absolute;
+    double frequency = (32000/(double)(I2S_fft_BUF_SIZE-1)) * (double)k;
+    light_show(u, absolute, frequency,k);
+    chprintf((BaseSequentialStream*)&global.sercanmux1,"%d,%d,%f,%d,%08X,%f\n", i, k, frequency, d1, d1, i2s_fft_buf[k]);
+    k++;
+    //chprintf((BaseSequentialStream*)&global.sercanmux1,"%d,%d\n", i, d1);
+  }
+  light_off_n(8);
 }
 
 msg_t
@@ -288,12 +362,12 @@ UserThread::main()
     this->sleep(MS2ST(1000));
     chprintf((BaseSequentialStream*)&global.sercanmux1,"Cycle %d\n", cycle);
 
-    fourier_analysis();
+    fourier_analysis(*this);
     cycle++;
     //ligh show
-    for(int i=0; i<5; i++){
-      light_show(*this);
-    }
+    // for(int i=0; i<5; i++){
+    //   light_show(*this);
+    // }
 
     //stop robot movement
     global.robot.setTargetSpeed(0,0);
