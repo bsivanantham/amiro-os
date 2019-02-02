@@ -595,15 +595,15 @@ int main(void) {
     continue;
   }
 
-  global.robot.setLightBrightness(10);
-  global.robot.setLightColor(0, Color::RED);
-  global.robot.setLightColor(1, Color::LIME);
-  global.robot.setLightColor(2, Color::BLUE);
-  global.robot.setLightColor(3, Color::WHITE);
-  global.robot.setLightColor(4, Color::RED);
-  global.robot.setLightColor(5, Color::LIME);
-  global.robot.setLightColor(6, Color::BLUE);
-  global.robot.setLightColor(7, Color::WHITE);
+  // global.robot.setLightBrightness(10);
+  // global.robot.setLightColor(0, Color::RED);
+  // global.robot.setLightColor(1, Color::LIME);
+  // global.robot.setLightColor(2, Color::BLUE);
+  // global.robot.setLightColor(3, Color::WHITE);
+  // global.robot.setLightColor(4, Color::RED);
+  // global.robot.setLightColor(5, Color::LIME);
+  // global.robot.setLightColor(6, Color::BLUE);
+  // global.robot.setLightColor(7, Color::WHITE);
 
 //   static uint16_t scannedData[NUMBER_OF_STEPS /*see lidar.h for this variable*/] = {}; UNCOMMENT TO START LIDAR
   while (true) {
